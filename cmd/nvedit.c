@@ -775,6 +775,7 @@ static int do_env_import(struct cmd_tbl *cmdtp, int flag,
 	int	del = 0;
 	int	crlf_is_lf = 0;
 	int	wl = 0;
+	int	validate = 0;
 	size_t	size;
 
 	cmd = *argv;
@@ -804,6 +805,9 @@ static int do_env_import(struct cmd_tbl *cmdtp, int flag,
 				break;
 			case 'd':
 				del = 1;
+				break;
+			case 'v':		/* validate variables */
+				validate = 1;
 				break;
 			default:
 				return CMD_RET_USAGE;
@@ -870,7 +874,8 @@ static int do_env_import(struct cmd_tbl *cmdtp, int flag,
 	}
 
 	if (!himport_r(&env_htab, ptr, size, sep, del ? 0 : H_NOCLEAR,
-		       crlf_is_lf, wl ? argc - 2 : 0, wl ? &argv[2] : NULL)) {
+		       crlf_is_lf, wl ? argc - 2 : 0, wl ? &argv[2] : NULL,
+		       validate)) {
 		pr_err("## Error: Environment import failed: errno = %d\n",
 		       errno);
 		return 1;
