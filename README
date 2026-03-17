@@ -26,6 +26,9 @@ Quick build:
   make rpi_arm64_defconfig
   make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
 
+Note: This branch contains AI-assisted development work (Claude, Anthropic).
+All changes require a final security review before any stable/production release.
+
 For the original upstream U-Boot README, see below.
 
 ------------------------------------------------------------------------
