@@ -724,7 +724,7 @@ static void parse_spl_header(const uint32_t spl_addr)
 		 * import -t" the string(s) at fel_script_address right away.
 		 */
 		himport_r(&env_htab, (char *)(uintptr_t)spl->fel_script_address,
-			  spl->fel_uEnv_length, '\n', H_NOCLEAR, 0, 0, NULL);
+			  spl->fel_uEnv_length, '\n', H_NOCLEAR, 0, 0, NULL, 0);
 		return;
 	}
 	/* otherwise assume .scr format (mkimage-type script) */
