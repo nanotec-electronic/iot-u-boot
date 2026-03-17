@@ -13,8 +13,8 @@ v2026.01.
 Branch: tpm-RP1-BCM2712-poc (TPM over SoftSPI — preserved POC)
 
 Documentation:
-  docs/README-bcm2712-uboot-tpm2.md  SoftSPI TPM approach, verification, pitfalls
-  docs/TPM2-VALIDATION-PLAN.md       Full TPM validation plan (NV counters,
+  doc/nanotec/README-bcm2712-uboot-tpm2.md  SoftSPI TPM approach, verification, pitfalls
+  doc/nanotec/TPM2-VALIDATION-PLAN.md       Full TPM validation plan (NV counters,
                                      seal/unseal, FDE, lifecycle)
 
 Key patches:
