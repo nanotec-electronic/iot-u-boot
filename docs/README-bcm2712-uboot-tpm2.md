@@ -69,6 +69,8 @@ The following Kconfig options must be enabled beyond the base defconfig:
 
 ### Device Tree Overlay
 
+Source: `overlays/soft-spi-tpm.dts`
+
 A DT overlay provides the `spi-gpio` node with the TPM child device. The
 overlay uses the `__fixups__` mechanism — the Pi firmware resolves `&gpio`
 label references to actual phandle values at boot time when loading overlays
@@ -80,6 +82,13 @@ Key points about the overlay:
 - Dual GPIO property names: `gpio-sck`/`gpio-mosi`/`gpio-miso` for U-Boot,
   `sck-gpios`/`mosi-gpios`/`miso-gpios` for Linux
 - `cs-gpios` is common to both drivers
+
+Compile and install:
+
+```bash
+dtc -@ -I dts -O dtb -o soft-spi-tpm.dtbo overlays/soft-spi-tpm.dts
+# Copy to boot partition overlays/ directory
+```
 
 Activated in `config.txt`:
 
