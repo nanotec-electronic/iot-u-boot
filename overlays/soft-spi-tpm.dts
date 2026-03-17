@@ -1,0 +1,64 @@
+/*
+ * Soft-SPI TPM overlay for Raspberry Pi 5
+ *
+ * Bit-bangs SPI0 pins via spi-gpio driver for
+ * Infineon SLB9672 TPM 2.0 (LetsTrust TPM module).
+ *
+ * Used by both U-Boot (SoftSPI) and Linux (spi-gpio kernel driver).
+ * Replaces the stock tpm-slb9670 overlay which uses hardware SPI.
+ *
+ * Pin mapping (LetsTrust TPM, Header Pin 17-26):
+ *   GPIO 11 = SCLK  (Header Pin 23)
+ *   GPIO 10 = MOSI  (Header Pin 19)
+ *   GPIO  9 = MISO  (Header Pin 21)
+ *   GPIO  7 = CS1   (Header Pin 26, active-low) ← LetsTrust default
+ *   GPIO 24 = RESET (Header Pin 18, active-low, optional)
+ *
+ * Usage in config.txt:
+ *   dtoverlay=soft-spi-tpm
+ *
+ * Note: CS0 (GPIO 8) remains free for other SPI devices.
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2712";
+
+	/* Soft-SPI bus with TPM child at root */
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			soft_spi: soft-spi {
+				compatible = "spi-gpio";
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				/* U-Boot soft-spi uses gpio-* names */
+				gpio-sck = <&gpio 11 0>;
+				gpio-mosi = <&gpio 10 0>;
+				gpio-miso = <&gpio 9 0>;
+				cs-gpios = <&gpio 7 1>;	/* CE1, active-low */
+
+				/* Linux spi-gpio driver uses *-gpios names */
+				sck-gpios = <&gpio 11 0>;
+				mosi-gpios = <&gpio 10 0>;
+				miso-gpios = <&gpio 9 0>;
+
+				num-chipselects = <1>;
+				spi-delay-us = <1>;
+				status = "okay";
+
+				tpm: slb9672@0 {
+					compatible = "infineon,slb9670",
+						     "tcg,tpm_tis-spi";
+					reg = <0>;
+					spi-max-frequency = <10000000>;
+					reset-gpios = <&gpio 24 1>; /* active-low */
+					status = "okay";
+				};
+			};
+		};
+	};
+};
