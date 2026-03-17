@@ -808,7 +808,8 @@ static int drop_var_from_set(const char *name, int nvars, char * vars[])
 
 int himport_r(struct hsearch_data *htab,
 		const char *env, size_t size, const char sep, int flag,
-		int crlf_is_lf, int nvars, char * const vars[])
+		int crlf_is_lf, int nvars, char * const vars[],
+		int validate)
 {
 	char *data, *sp, *dp, *name, *value;
 	char *localvars[nvars];
@@ -953,6 +954,19 @@ int himport_r(struct hsearch_data *htab,
 		if (!drop_var_from_set(name, nvars, localvars))
 			continue;
 
+		/* validate: reject values containing whitespace */
+		if (validate) {
+			const char *p;
+
+			for (p = value; *p; p++) {
+				if (*p == ' ' || *p == '\t') {
+					debug("VALIDATE: skipping \"%s\" (value contains whitespace)\n",
+					      name);
+					goto next_entry;
+				}
+			}
+		}
+
 		/* enter into hash table */
 		e.key = name;
 		e.data = value;
@@ -968,6 +982,8 @@ int himport_r(struct hsearch_data *htab,
 		debug("INSERT: table %p, filled %d/%d rv %p ==> name=\"%s\" value=\"%s\"\n",
 			htab, htab->filled, htab->size,
 			rv, name, value);
+next_entry:
+		; /* label for validate skip */
 	} while ((dp < data + size) && *dp);	/* size check needed for text */
 						/* without '\0' termination */
 	debug("INSERT: free(data = %p)\n", data);
