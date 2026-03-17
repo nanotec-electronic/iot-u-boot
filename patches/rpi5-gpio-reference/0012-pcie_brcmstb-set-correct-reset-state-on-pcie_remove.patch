@@ -1,0 +1,53 @@
+From 8532e54303e58e11b32c838fbc9c4e14bcccadc4 Mon Sep 17 00:00:00 2001
+From: Oleksii Moisieiev <oleksii_moisieiev@epam.com>
+Date: Mon, 15 Jul 2024 11:38:52 +0300
+Subject: [PATCH] drivers: pci: pcie_brcmstb: set correct reset state on
+ pcie_remove
+
+For the controllers that are utilizing reset for bridge sw init,
+such as BCM2712, reset should be deasserted after assertion.
+Leaving it in asserted state may lead to unexpected hangs in
+the Linux Kernel driver because it do not perform reset initialization
+and start accessing the device memory.
+
+We've met this issue on the Raspberry PI5 kernel and got the following
+log:
+
+[    1.842953] brcm-pcie 1000110000.pcie: host bridge /axi/pcie@110000 ranges:
+[    1.849953] brcm-pcie 1000110000.pcie:   No bus range found for /axi/pcie@110000, using [bus 00-ff]
+[    1.859104] brcm-pcie 1000110000.pcie:      MEM 0x1b00000000..0x1bfffffffb -> 0x0000000000
+[    1.867407] brcm-pcie 1000110000.pcie:      MEM 0x1800000000..0x1affffffff -> 0x0400000000
+[    1.875707] brcm-pcie 1000110000.pcie:   IB MEM 0x0000000000..0x0fffffffff -> 0x1000000000nc
+
+After that system reports a context switch error after 120 sec timeout.
+
+Signed-off-by: Oleksii Moisieiev <oleksii_moisieiev@epam.com>
+Reviewed-by: Volodymyr Babchuk <volodymyr_babchuk@epam.com>
+---
+ drivers/pci/pcie_brcmstb.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/pci/pcie_brcmstb.c b/drivers/pci/pcie_brcmstb.c
+index 2e58ea453e..c5fe5f9d20 100644
+--- a/drivers/pci/pcie_brcmstb.c
++++ b/drivers/pci/pcie_brcmstb.c
+@@ -851,6 +851,16 @@ static int brcm_pcie_remove(struct udevice *dev)
+ 	/* Shutdown bridge */
+ 	pcie->pcie_cfg->bridge_sw_init_set(pcie, 1);
+ 
++	/*
++	 * For the controllers that are utilizing reset for bridge Sw init,
++	 * such as BCM2712, reset should be deasserted after assertion.
++	 * Leaving it in asserted state may lead to unexpected hangs in
++	 * the Linux Kernel driver because it do not perform reset initialization
++	 * and start accessing device memory.
++	 */
++	if (pcie->pcie_cfg->type == BCM2712)
++		pcie->pcie_cfg->bridge_sw_init_set(pcie, 0);
++
+ 	return 0;
+ }
+ 
+-- 
+2.43.0
+
