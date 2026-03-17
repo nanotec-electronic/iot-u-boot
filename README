@@ -12,8 +12,8 @@ secure boot chain. Based on upstream v2026.01.
 Branch: uc-BCM2712 (Ubuntu Core secure boot — release target)
 
 Documentation:
-  docs/README-uc-secureboot.md  Architecture, defconfig, security analysis
-  docs/README-testing.md        Test strategy and manual runbook
+  doc/nanotec/README-uc-secureboot.md  Architecture, defconfig, security analysis
+  doc/nanotec/README-testing.md        Test strategy and manual runbook
 
 Key files:
   configs/rpi_sb_uc_defconfig           Hardened defconfig
