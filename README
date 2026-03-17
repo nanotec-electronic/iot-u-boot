@@ -3,6 +3,33 @@
 # (C) Copyright 2000 - 2013
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 
+Nanotec IoT — Raspberry Pi 5 / CM5 TPM 2.0 POC
+================================================
+
+This is nanotec-electronic's U-Boot fork for the Pi 5 / CM5 with RP1
+GPIO support (SoftSPI) for TPM 2.0 communication. Based on upstream
+v2026.01.
+
+Branch: tpm-RP1-BCM2712-poc (TPM over SoftSPI — preserved POC)
+
+Documentation:
+  docs/README-bcm2712-uboot-tpm2.md  SoftSPI TPM approach, verification, pitfalls
+  docs/TPM2-VALIDATION-PLAN.md       Full TPM validation plan (NV counters,
+                                     seal/unseal, FDE, lifecycle)
+
+Key patches:
+  13 RP1 GPIO commits from xen-troops/u-boot, conflict-resolved for v2026.01.
+  Enables PCI enumeration of RP1 southbridge and GPIO bit-bang SPI.
+
+Quick build:
+  make mrproper
+  make rpi_arm64_defconfig
+  make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+
+For the original upstream U-Boot README, see below.
+
+------------------------------------------------------------------------
+
 Summary:
 ========
 
