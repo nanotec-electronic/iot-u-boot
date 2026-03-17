@@ -1,0 +1,99 @@
+CONFIG_ARM=y
+CONFIG_POSITION_INDEPENDENT=y
+CONFIG_ARCH_BCM283X=y
+CONFIG_TARGET_RPI_ARM64=y
+CONFIG_NR_DRAM_BANKS=8
+CONFIG_ENV_SIZE=0x4000
+CONFIG_DEFAULT_DEVICE_TREE="bcm2711-rpi-4-b"
+CONFIG_OF_LIBFDT_OVERLAY=y
+CONFIG_DM_RESET=y
+CONFIG_SYS_LOAD_ADDR=0x1000000
+CONFIG_PCI=y
+# Security: use rpi-uc.env (compiled-in boot flow, no boot.scr)
+CONFIG_ENV_SOURCE_FILE="rpi-uc"
+# Security: no persistent writable environment
+CONFIG_ENV_IS_NOWHERE=y
+# CONFIG_ENV_IS_IN_FAT is not set
+CONFIG_FIT=y
+CONFIG_FIT_SIGNATURE=y
+CONFIG_FIT_VERBOSE=y
+CONFIG_RSA=y
+CONFIG_BOOTDELAY=-2
+# Security: keyed autoboot — require password to interrupt boot (change for production)
+CONFIG_AUTOBOOT_KEYED=y
+CONFIG_AUTOBOOT_STOP_STR="changeme"
+# Boot flow: compiled-in env, no boot.scr
+CONFIG_USE_BOOTCOMMAND=y
+CONFIG_BOOTCOMMAND="run boot_uc"
+# Security: panic=-1 as static bootargs (also set dynamically in load_uc)
+CONFIG_USE_BOOTARGS=y
+CONFIG_BOOTARGS="panic=-1"
+# Security: boot retry — reset if boot fails (prevents shell hang)
+CONFIG_BOOT_RETRY=y
+CONFIG_BOOT_RETRY_TIME=60
+CONFIG_RESET_TO_RETRY=y
+# NOTE: CONFIG_LEGACY_IMAGE_FORMAT intentionally NOT set — no boot.scr needed
+# BOOTSTD_DEFAULTS provides hush shell, filesystem commands (load/save), FAT driver,
+# partition support, etc. Safe to keep — boot.scr execution requires LEGACY_IMAGE_FORMAT
+# (disabled) and our BOOTCOMMAND goes straight to boot_uc, never loading boot.scr.
+CONFIG_BOOTSTD_DEFAULTS=y
+# CONFIG_BOOTMETH_VBE is not set
+CONFIG_OF_BOARD_SETUP=y
+CONFIG_FDT_SIMPLEFB=y
+# PREBOOT disabled: headless system, serial-only console (no vidconsole).
+# If re-enabling HDMI or USB keyboard support, restore:
+#   CONFIG_USE_PREBOOT=y  (default: "pci enum; usb start;" — initializes RP1 via PCIe)
+# Without PREBOOT, vidconsole is in a bad state and causes serial artifacts.
+# CONFIG_USE_PREBOOT is not set
+# Command buffer must fit load_uc (~2250 chars when flattened)
+CONFIG_SYS_CBSIZE=4096
+CONFIG_SYS_PBSIZE=4121
+# CONFIG_DISPLAY_CPUINFO is not set
+# CONFIG_DISPLAY_BOARDINFO is not set
+CONFIG_MISC_INIT_R=y
+CONFIG_SYS_PROMPT="U-Boot> "
+CONFIG_CMD_GPIO=y
+CONFIG_CMD_MMC=y
+CONFIG_CMD_PCI=y
+CONFIG_CMD_USB=y
+CONFIG_CMD_FS_UUID=y
+# Security: disable EFI boot paths (attack surface reduction)
+# CONFIG_BOOTM_EFI is not set
+# CONFIG_CMD_BOOTEFI is not set
+# CONFIG_EFI_LOADER is not set
+CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
+CONFIG_TFTP_TSIZE=y
+CONFIG_DM_DMA=y
+CONFIG_DFU_MMC=y
+CONFIG_SYS_DFU_DATA_BUF_SIZE=0x100000
+CONFIG_SYS_DFU_MAX_FILE_SIZE=0x200000
+CONFIG_BCM2835_GPIO=y
+CONFIG_MMC_SDHCI=y
+CONFIG_MMC_SDHCI_SDMA=y
+CONFIG_MMC_SDHCI_BCM2835=y
+CONFIG_MMC_SDHCI_BCMSTB=y
+CONFIG_BCMGENET=y
+CONFIG_PCI_BRCMSTB=y
+CONFIG_PINCTRL=y
+# CONFIG_PINCTRL_GENERIC is not set
+CONFIG_DM_RNG=y
+CONFIG_RNG_IPROC200=y
+# CONFIG_REQUIRE_SERIAL_CONSOLE is not set
+CONFIG_SYSINFO=y
+CONFIG_SYSINFO_SMBIOS=y
+CONFIG_USB=y
+CONFIG_USB_XHCI_HCD=y
+CONFIG_USB_XHCI_PCI=y
+CONFIG_USB_DWC2=y
+CONFIG_USB_KEYBOARD=y
+CONFIG_USB_HOST_ETHER=y
+CONFIG_USB_ETHER_LAN78XX=y
+CONFIG_USB_ETHER_SMSC95XX=y
+CONFIG_VIDEO=y
+# CONFIG_VIDEO_BPP8 is not set
+# CONFIG_VIDEO_BPP16 is not set
+CONFIG_SYS_WHITE_ON_BLACK=y
+CONFIG_VIDEO_BCM2835=y
+CONFIG_CONSOLE_SCROLL_LINES=10
+CONFIG_PHYS_TO_BUS=y
+# CONFIG_HEXDUMP is not set
