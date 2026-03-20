@@ -415,6 +415,8 @@ def test_env_import_validate_accepts_clean(state_test_env, value):
     ('bar\tbaz', 'tab'),
     ('bar\rbaz', 'carriage-return'),
     ('bar\nbaz', 'newline'),
+    ('bar\vbaz', 'vertical-tab'),
+    ('bar\fbaz', 'form-feed'),
     ('run;reset', 'semicolon'),
     ('a|b', 'pipe'),
     ('a&&b', 'ampersand'),
