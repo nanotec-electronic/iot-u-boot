@@ -238,7 +238,9 @@ save ${devtype} ${devnum}:${kernel_bootpart} ${scriptaddr} ${core_state} ${files
 
 `env export -c` serializes only the named variables into the same CRC32-protected
 format at `${scriptaddr}`, then `save` writes the buffer to disk. The `${filesize}`
-from the preceding `load` ensures the output blob matches the original size.
+is set by `env export -c` to the size of the exported blob (not the originally
+loaded size). The on-disk boot.sel size may differ from the original template,
+but snapd only requires a valid CRC32 header — not a fixed size.
 
 ## U-Boot Source Patches
 
