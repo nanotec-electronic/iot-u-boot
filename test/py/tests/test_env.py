@@ -368,13 +368,14 @@ def test_env_import_whitelist_delete(state_test_env):
     unset_var(state_test_env, 'foo4')
 
 def _write_env_to_ram(ubman, addr, env_str):
-    """Write a text-format environment string to RAM using mw.b.
+    """Write a binary-format environment blob to RAM using mw.b.
 
     Args:
         ubman: U-Boot console.
         addr: Hex address string (e.g. '10000000').
         env_str: The raw environment bytes as a Python bytes object.
             Format: key=value\\0key2=value2\\0\\0
+            Import with 'env import -b' (NUL-separated binary format).
 
     Returns:
         The size of the written data.
@@ -402,7 +403,7 @@ def test_env_import_validate_accepts_clean(state_test_env, value):
     env_blob = b'testvar=' + value.encode() + b'\x00\x00'
     size = _write_env_to_ram(c, addr, env_blob)
 
-    c.run_command('env import -v -t %s %x' % (addr, size))
+    c.run_command('env import -v -b %s %x' % (addr, size))
 
     validate_set(state_test_env, 'testvar', value)
 
@@ -431,7 +432,7 @@ def test_env_import_validate_rejects_unsafe(state_test_env, value, desc):
     env_blob = b'testvar=' + value.encode() + b'\x00\x00'
     size = _write_env_to_ram(c, addr, env_blob)
 
-    c.run_command('env import -v -t %s %x' % (addr, size))
+    c.run_command('env import -v -b %s %x' % (addr, size))
 
     validate_empty(state_test_env, 'testvar')
 
@@ -449,7 +450,7 @@ def test_env_import_no_validate_accepts_metachar(state_test_env):
     env_blob = b'testvar=run;reset\x00\x00'
     size = _write_env_to_ram(c, addr, env_blob)
 
-    c.run_command('env import -t %s %x' % (addr, size))
+    c.run_command('env import -b %s %x' % (addr, size))
 
     validate_set(state_test_env, 'testvar', 'run;reset')
 
@@ -475,7 +476,7 @@ def test_env_import_whitelist_with_validation(state_test_env):
     env_blob = b'clean=good\x00unsafe=run;reset\x00extra=sneaky\x00\x00'
     size = _write_env_to_ram(c, addr, env_blob)
 
-    c.run_command('env import -v -t %s %x clean unsafe' % (addr, size))
+    c.run_command('env import -v -b %s %x clean unsafe' % (addr, size))
 
     validate_set(state_test_env, 'clean', 'good')
     validate_empty(state_test_env, 'unsafe')
@@ -498,7 +499,7 @@ def test_env_import_whitelist_blocks_unlisted(state_test_env):
     env_blob = b'allowed=yes\x00forbidden=evil\x00\x00'
     size = _write_env_to_ram(c, addr, env_blob)
 
-    c.run_command('env import -t %s %x allowed' % (addr, size))
+    c.run_command('env import -b %s %x allowed' % (addr, size))
 
     validate_set(state_test_env, 'allowed', 'yes')
     validate_empty(state_test_env, 'forbidden')
