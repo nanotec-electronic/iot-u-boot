@@ -162,8 +162,9 @@ recalculates the CRC. That's why the `-c` check is layered with:
 
 - **Variable whitelisting** — only named variables (`${recovery_vars}` /
   `${kernel_vars}`) are imported, everything else is ignored
-- **`-v` validation** — rejects values containing whitespace, preventing
-  command injection like `snapd_recovery_mode=run evil_cmd`
+- **`-v` validation** — rejects values containing whitespace or shell
+  metacharacters (`;|&$` + backtick + parens), preventing command injection
+  like `snapd_recovery_mode=run evil_cmd` or `run;reset`
 
 ### boot.sel is not signed — and why that's acceptable
 
@@ -175,8 +176,8 @@ is inherent to any system where the bootloader needs runtime-writable state
 from the OS.
 
 However, the damage from a tampered boot.sel is **extremely limited**. Even
-with a perfectly crafted blob (valid CRC, no whitespace in values), an attacker
-can only control these whitelisted variables:
+with a perfectly crafted blob (valid CRC, no whitespace or metacharacters in
+values), an attacker can only control these whitelisted variables:
 
 | Variable | Attacker can set to | Actual impact |
 |----------|---------------------|---------------|
@@ -244,15 +245,16 @@ from the preceding `load` ensures the output blob matches the original size.
 ### `env import -v` Validation (ported from NXP patch 0001)
 
 Adds a `-v` flag to the `env import` command that validates imported values
-by rejecting any containing whitespace characters. This prevents a malformed
-`boot.sel` from injecting values like `snapd_recovery_mode=run evil_cmd`.
+by rejecting any containing whitespace or shell metacharacters (`;|&$` +
+backtick + parens). This prevents a malformed `boot.sel` from injecting
+values like `snapd_recovery_mode=run evil_cmd` or `run;reset`.
 
 **Modified files:**
 
 - `cmd/nvedit.c` — Parse `-v` flag, pass `validate` parameter to `himport_r()`
 - `include/search.h` — Updated `himport_r()` declaration (added 9th param)
 - `lib/hashtable.c` — Updated `himport_r()` definition, added validation logic
-  that skips entries where the value contains space or tab characters
+  that skips entries where the value contains whitespace or shell metacharacters
 - `env/common.c` — 3 call sites updated (pass `0` for validate)
 - `board/sunxi/board.c` — 1 call site updated (pass `0` for validate)
 
