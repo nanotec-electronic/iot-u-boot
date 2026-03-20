@@ -137,6 +137,67 @@ def test_bootsel_export_roundtrip(ubman):
 
 
 # ---------------------------------------------------------------------------
+# Sequential import isolation (mirrors load_uc two-stage protocol)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.buildconfigspec('cmd_importenv')
+@pytest.mark.buildconfigspec('cmd_exportenv')
+def test_bootsel_sequential_import_isolation(ubman):
+    """Two sequential imports with different whitelists do not interfere.
+
+    load_uc imports recovery_vars from ubuntu-seed, then kernel_vars from
+    ubuntu-boot. The second import must not clobber the first.
+    """
+    ram_base = utils.find_ram_base(ubman)
+    addr = '%x' % ram_base
+
+    _cleanup(ubman, 'snapd_recovery_mode', 'snap_kernel', 'kernel_status')
+
+    # Stage 1: simulate ubuntu-seed boot.sel (recovery vars)
+    ubman.run_command('setenv snapd_recovery_mode run')
+
+    # Stage 2: simulate ubuntu-boot boot.sel (kernel vars)
+    ubman.run_command('setenv snap_kernel kern-1')
+    ubman.run_command('setenv kernel_status try')
+
+    # Verify first-stage var survived second-stage setup
+    _validate_set(ubman, 'snapd_recovery_mode', 'run')
+    _validate_set(ubman, 'snap_kernel', 'kern-1')
+    _validate_set(ubman, 'kernel_status', 'try')
+
+    # Now simulate the actual two-stage import using env export/import
+    # with different whitelists, as load_uc does
+
+    # Export all three vars into a single blob (simulates boot.sel content)
+    ubman.run_command(
+        'env export -c %s snapd_recovery_mode snap_kernel kernel_status'
+        % addr)
+    response = ubman.run_command('echo ${filesize}')
+    filesize = response.strip()
+
+    # Clear everything
+    _cleanup(ubman, 'snapd_recovery_mode', 'snap_kernel', 'kernel_status')
+
+    # Import stage 1: only recovery var
+    ubman.run_command(
+        'env import -v -c %s %s snapd_recovery_mode' % (addr, filesize))
+    _validate_set(ubman, 'snapd_recovery_mode', 'run')
+    _validate_empty(ubman, 'snap_kernel')
+
+    # Import stage 2: only kernel vars (from same blob for simplicity)
+    ubman.run_command(
+        'env import -v -c %s %s snap_kernel kernel_status'
+        % (addr, filesize))
+
+    # First-stage var must survive second import
+    _validate_set(ubman, 'snapd_recovery_mode', 'run')
+    _validate_set(ubman, 'snap_kernel', 'kern-1')
+    _validate_set(ubman, 'kernel_status', 'try')
+
+    _cleanup(ubman, 'snapd_recovery_mode', 'snap_kernel', 'kernel_status')
+
+
+# ---------------------------------------------------------------------------
 # Bootargs and path construction
 # ---------------------------------------------------------------------------
 
