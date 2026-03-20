@@ -99,7 +99,7 @@ ssize_t hexport_r(struct hsearch_data *htab, const char sep, int flag,
  * nvars: length of vars array
  * vars: array of strings (variable names) to import (nvars == 0 means all)
  * validate: if non-zero, reject entries whose values contain whitespace
- *           (space, tab, CR, LF) or shell metacharacters (;|&$`());
+ *           (space, tab, LF, CR, VT, FF) or shell metacharacters (;|&$`());
  *           invalid entries are silently skipped, the rest of the import continues
  */
 int himport_r(struct hsearch_data *htab, const char *env, size_t size,
