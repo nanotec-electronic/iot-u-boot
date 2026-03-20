@@ -412,6 +412,7 @@ def test_env_import_validate_accepts_clean(state_test_env, value):
 @pytest.mark.parametrize('value,desc', [
     ('bar baz', 'space'),
     ('bar\tbaz', 'tab'),
+    ('bar\rbaz', 'carriage-return'),
     ('run;reset', 'semicolon'),
     ('a|b', 'pipe'),
     ('a&&b', 'ampersand'),
@@ -453,6 +454,57 @@ def test_env_import_no_validate_accepts_metachar(state_test_env):
     validate_set(state_test_env, 'testvar', 'run;reset')
 
     unset_var(state_test_env, 'testvar')
+
+@pytest.mark.buildconfigspec('cmd_importenv')
+def test_env_import_whitelist_with_validation(state_test_env):
+    """Test whitelist and -v validation work together (as used by load_uc).
+
+    Three variables in the blob:
+      clean   - whitelisted, clean value   -> imported
+      unsafe  - whitelisted, unsafe value  -> rejected by -v
+      extra   - NOT whitelisted            -> blocked by whitelist
+    """
+    c = state_test_env.ubman
+    ram_base = utils.find_ram_base(c)
+    addr = '%08x' % ram_base
+
+    unset_var(state_test_env, 'clean')
+    unset_var(state_test_env, 'unsafe')
+    unset_var(state_test_env, 'extra')
+
+    env_blob = b'clean=good\x00unsafe=run;reset\x00extra=sneaky\x00\x00'
+    size = _write_env_to_ram(c, addr, env_blob)
+
+    c.run_command('env import -v -t %s %x clean unsafe' % (addr, size))
+
+    validate_set(state_test_env, 'clean', 'good')
+    validate_empty(state_test_env, 'unsafe')
+    validate_empty(state_test_env, 'extra')
+
+    unset_var(state_test_env, 'clean')
+    unset_var(state_test_env, 'unsafe')
+    unset_var(state_test_env, 'extra')
+
+@pytest.mark.buildconfigspec('cmd_importenv')
+def test_env_import_whitelist_blocks_unlisted(state_test_env):
+    """Test that variables not in the whitelist are blocked from import."""
+    c = state_test_env.ubman
+    ram_base = utils.find_ram_base(c)
+    addr = '%08x' % ram_base
+
+    unset_var(state_test_env, 'allowed')
+    unset_var(state_test_env, 'forbidden')
+
+    env_blob = b'allowed=yes\x00forbidden=evil\x00\x00'
+    size = _write_env_to_ram(c, addr, env_blob)
+
+    c.run_command('env import -t %s %x allowed' % (addr, size))
+
+    validate_set(state_test_env, 'allowed', 'yes')
+    validate_empty(state_test_env, 'forbidden')
+
+    unset_var(state_test_env, 'allowed')
+    unset_var(state_test_env, 'forbidden')
 
 @pytest.mark.buildconfigspec('cmd_nvedit_info')
 def test_env_info(state_test_env):
