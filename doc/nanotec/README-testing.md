@@ -79,12 +79,12 @@ disabled EFI entirely in our defconfig).
       and not test_extension and not test_lsblk and not test_sleep \
       and not test_net_boot and not test_net and not test_ab"
 
-# UC bootsel integration tests only (7 tests):
+# UC bootsel integration tests only (8 tests):
 ./test/py/test.py --bd sandbox --build-dir . -k test_bootsel
 
-# env import -v validation tests only (13 tests):
+# env import -v validation + whitelist tests (22 tests):
 ./test/py/test.py --bd sandbox --build-dir . \
-  -k "test_env_import_validate or test_env_import_no_validate"
+  -k "test_env_import_validate or test_env_import_no_validate or test_env_import_whitelist"
 ```
 
 ### UC bootsel tests (`test/py/tests/test_uc_bootsel.py`)
@@ -95,9 +95,20 @@ disabled EFI entirely in our defconfig).
 | `test_bootsel_ab_trying_to_cleared` | A/B: trying to cleared (rollback) |
 | `test_bootsel_ab_normal_boot` | A/B: normal boot, no state change |
 | `test_bootsel_export_roundtrip` | export -c then import -v -c roundtrip |
+| `test_bootsel_sequential_import_isolation` | Two-stage import (seed then boot) doesn't cross-contaminate |
 | `test_bootsel_run_mode_bootargs` | Run mode bootargs correct |
 | `test_bootsel_install_mode_bootargs` | Install mode bootargs correct |
 | `test_bootsel_kernel_path_construction` | Kernel path prefix derived correctly |
+
+### Validation & whitelist tests (`test/py/tests/test_env.py`)
+
+| Test | What it verifies |
+|------|-----------------|
+| `test_env_import_validate_accepts_clean` | `-v` accepts clean values (4 parametrized: words, numbers, paths, snap names) |
+| `test_env_import_validate_rejects_unsafe` | `-v` rejects unsafe chars (11 parametrized: space, tab, CR, LF, VT, FF, `;`, `\|`, `&`, `$`, `` ` ``, `(`) |
+| `test_env_import_no_validate_accepts_metachar` | Control: without `-v`, metacharacters pass through |
+| `test_env_import_whitelist_with_validation` | `-v` + whitelist combined: clean imported, unsafe rejected, unlisted blocked |
+| `test_env_import_whitelist_blocks_unlisted` | Variables not in whitelist are blocked from import |
 
 ### CI
 
