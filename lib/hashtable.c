@@ -960,7 +960,7 @@ int himport_r(struct hsearch_data *htab,
 			int unsafe = 0;
 
 			for (p = value; *p; p++) {
-				if (*p == ' ' || *p == '\t' || *p == '\r' ||
+				if (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n' ||
 				    *p == ';' || *p == '|' || *p == '&' ||
 				    *p == '$' || *p == '`' ||
 				    *p == '(' || *p == ')') {
