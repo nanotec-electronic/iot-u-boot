@@ -954,16 +954,24 @@ int himport_r(struct hsearch_data *htab,
 		if (!drop_var_from_set(name, nvars, localvars))
 			continue;
 
-		/* validate: reject values containing whitespace */
+		/* validate: reject values containing whitespace or shell metacharacters */
 		if (validate) {
 			const char *p;
+			int unsafe = 0;
 
 			for (p = value; *p; p++) {
-				if (*p == ' ' || *p == '\t') {
-					debug("VALIDATE: skipping \"%s\" (value contains whitespace)\n",
-					      name);
-					goto next_entry;
+				if (*p == ' ' || *p == '\t' ||
+				    *p == ';' || *p == '|' || *p == '&' ||
+				    *p == '$' || *p == '`' ||
+				    *p == '(' || *p == ')') {
+					unsafe = 1;
+					break;
 				}
+			}
+			if (unsafe) {
+				debug("VALIDATE: skipping \"%s\" (value contains unsafe characters)\n",
+				      name);
+				continue;
 			}
 		}
 
@@ -982,8 +990,6 @@ int himport_r(struct hsearch_data *htab,
 		debug("INSERT: table %p, filled %d/%d rv %p ==> name=\"%s\" value=\"%s\"\n",
 			htab, htab->filled, htab->size,
 			rv, name, value);
-next_entry:
-		; /* label for validate skip */
 	} while ((dp < data + size) && *dp);	/* size check needed for text */
 						/* without '\0' termination */
 	debug("INSERT: free(data = %p)\n", data);

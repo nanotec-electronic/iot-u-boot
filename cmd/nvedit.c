@@ -755,6 +755,8 @@ sep_err:
  *		for line endings. Only effective in addition to -t.
  *	-b:	assume binary format ('\0' separated, "\0\0" terminated)
  *	-c:	assume checksum protected environment format
+ *	-v:	validate imported values; entries whose values contain
+ *		whitespace or shell metacharacters are silently skipped
  *	addr:	memory address to read from
  *	size:	length of input data; if missing, proper '\0'
  *		termination is mandatory
@@ -1168,7 +1170,7 @@ U_BOOT_LONGHELP(env,
 #endif
 #endif
 #if defined(CONFIG_CMD_IMPORTENV)
-	"env import [-d] [-t [-r] | -b | -c] addr [size] [var ...] - import environment\n"
+	"env import [-d] [-t [-r] | -b | -c] [-v] addr [size] [var ...] - import environment\n"
 #endif
 #if defined(CONFIG_CMD_NVEDIT_INDIRECT)
 	"env indirect <to> <from> [default] - sets <to> to the value of <from>, using [default] when unset\n"
