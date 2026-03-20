@@ -98,9 +98,9 @@ ssize_t hexport_r(struct hsearch_data *htab, const char sep, int flag,
 /*
  * nvars: length of vars array
  * vars: array of strings (variable names) to import (nvars == 0 means all)
- * validate: if non-zero, reject entries whose values contain any whitespace
- *           (space/tab) or shell metacharacters (;|&$`()); invalid entries
- *           are silently skipped, the rest of the import continues
+ * validate: if non-zero, reject entries whose values contain whitespace
+ *           (space, tab, carriage return) or shell metacharacters (;|&$`());
+ *           invalid entries are silently skipped, the rest of the import continues
  */
 int himport_r(struct hsearch_data *htab, const char *env, size_t size,
 	      const char sep, int flag, int crlf_is_lf, int nvars,
