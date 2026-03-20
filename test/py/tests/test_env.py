@@ -367,6 +367,93 @@ def test_env_import_whitelist_delete(state_test_env):
     unset_var(state_test_env, 'foo3')
     unset_var(state_test_env, 'foo4')
 
+def _write_env_to_ram(ubman, addr, env_str):
+    """Write a text-format environment string to RAM using mw.b.
+
+    Args:
+        ubman: U-Boot console.
+        addr: Hex address string (e.g. '10000000').
+        env_str: The raw environment bytes as a Python bytes object.
+            Format: key=value\\0key2=value2\\0\\0
+
+    Returns:
+        The size of the written data.
+    """
+    base = int(addr, 16)
+    for i, byte in enumerate(env_str):
+        ubman.run_command('mw.b %x %02x' % (base + i, byte))
+    return len(env_str)
+
+@pytest.mark.buildconfigspec('cmd_importenv')
+@pytest.mark.parametrize('value', [
+    'run',
+    '20',
+    'uboot/ubuntu/20/kernel.img',
+    'core24-pi-kernel.snap',
+])
+def test_env_import_validate_accepts_clean(state_test_env, value):
+    """Test that env import -v accepts valid values without unsafe chars."""
+    c = state_test_env.ubman
+    ram_base = utils.find_ram_base(c)
+    addr = '%08x' % ram_base
+
+    unset_var(state_test_env, 'testvar')
+
+    env_blob = b'testvar=' + value.encode() + b'\x00\x00'
+    size = _write_env_to_ram(c, addr, env_blob)
+
+    c.run_command('env import -v -t %s %x' % (addr, size))
+
+    validate_set(state_test_env, 'testvar', value)
+
+    unset_var(state_test_env, 'testvar')
+
+@pytest.mark.buildconfigspec('cmd_importenv')
+@pytest.mark.parametrize('value,desc', [
+    ('bar baz', 'space'),
+    ('bar\tbaz', 'tab'),
+    ('run;reset', 'semicolon'),
+    ('a|b', 'pipe'),
+    ('a&&b', 'ampersand'),
+    ('${x}', 'dollar'),
+    ('a`b', 'backtick'),
+    ('a(b', 'paren'),
+])
+def test_env_import_validate_rejects_unsafe(state_test_env, value, desc):
+    """Test that env import -v rejects values with whitespace or metacharacters."""
+    c = state_test_env.ubman
+    ram_base = utils.find_ram_base(c)
+    addr = '%08x' % ram_base
+
+    unset_var(state_test_env, 'testvar')
+
+    env_blob = b'testvar=' + value.encode() + b'\x00\x00'
+    size = _write_env_to_ram(c, addr, env_blob)
+
+    c.run_command('env import -v -t %s %x' % (addr, size))
+
+    validate_empty(state_test_env, 'testvar')
+
+    unset_var(state_test_env, 'testvar')
+
+@pytest.mark.buildconfigspec('cmd_importenv')
+def test_env_import_no_validate_accepts_metachar(state_test_env):
+    """Test that env import WITHOUT -v accepts metacharacters (control test)."""
+    c = state_test_env.ubman
+    ram_base = utils.find_ram_base(c)
+    addr = '%08x' % ram_base
+
+    unset_var(state_test_env, 'testvar')
+
+    env_blob = b'testvar=run;reset\x00\x00'
+    size = _write_env_to_ram(c, addr, env_blob)
+
+    c.run_command('env import -t %s %x' % (addr, size))
+
+    validate_set(state_test_env, 'testvar', 'run;reset')
+
+    unset_var(state_test_env, 'testvar')
+
 @pytest.mark.buildconfigspec('cmd_nvedit_info')
 def test_env_info(state_test_env):
 

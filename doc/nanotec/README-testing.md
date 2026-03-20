@@ -42,6 +42,71 @@ Serial-based tests (U-Boot pre-SSH) assert against the serial.log captured durin
 
 ---
 
+## Sandbox Tests (Automated)
+
+U-Boot's test framework runs against a sandbox build (native x86_64 binary,
+no hardware required). This covers env import/export, FIT handling, hush shell,
+filesystem ops, and our custom UC bootsel integration tests.
+
+### Build sandbox
+
+```bash
+make sandbox_defconfig
+scripts/config --disable CONFIG_EFI_CAPSULE_AUTHENTICATE
+make olddefconfig
+make -j$(nproc)
+```
+
+Note: EFI capsule auth is disabled (requires `efitools` and is irrelevant — we
+disabled EFI entirely in our defconfig).
+
+### Run tests
+
+```bash
+# Focused sandbox suite (~1250 tests, ~2.5 min):
+# Excludes EFI/capsule, Android, VBE/VPL/SPL, Zynq/FPGA/TPM,
+# network, DFU/UMS, and other irrelevant platform tests.
+./test/py/test.py --bd sandbox --build-dir . \
+  -k "not efi and not capsule and not test_dm and not test_pinmux \
+      and not abootimg and not test_avb and not test_vbe \
+      and not test_vpl and not test_spl and not test_handoff \
+      and not test_ofplatdata and not zynq and not test_qfw \
+      and not test_tpm2 and not test_scp03 and not test_optee \
+      and not test_fpga and not test_dfu and not test_ums \
+      and not test_upl and not test_fw_handoff and not test_mdio \
+      and not test_mii and not test_scsi and not test_smbios \
+      and not test_trace and not test_pstore and not test_distro \
+      and not test_extension and not test_lsblk and not test_sleep \
+      and not test_net_boot and not test_net and not test_ab"
+
+# UC bootsel integration tests only (7 tests):
+./test/py/test.py --bd sandbox --build-dir . -k test_bootsel
+
+# env import -v validation tests only (13 tests):
+./test/py/test.py --bd sandbox --build-dir . \
+  -k "test_env_import_validate or test_env_import_no_validate"
+```
+
+### UC bootsel tests (`test/py/tests/test_uc_bootsel.py`)
+
+| Test | What it verifies |
+|------|-----------------|
+| `test_bootsel_ab_try_to_trying` | A/B: try to trying transition |
+| `test_bootsel_ab_trying_to_cleared` | A/B: trying to cleared (rollback) |
+| `test_bootsel_ab_normal_boot` | A/B: normal boot, no state change |
+| `test_bootsel_export_roundtrip` | export -c then import -v -c roundtrip |
+| `test_bootsel_run_mode_bootargs` | Run mode bootargs correct |
+| `test_bootsel_install_mode_bootargs` | Install mode bootargs correct |
+| `test_bootsel_kernel_path_construction` | Kernel path prefix derived correctly |
+
+### CI
+
+GitHub Actions runs automatically on push/PR (`.github/workflows/test.yml`):
+- **sandbox-tests**: full sandbox suite minus EFI/DM/pinmux
+- **cross-compile-check**: builds `rpi_sb_uc_defconfig` with aarch64 toolchain
+
+---
+
 ## Manual Test Runbook
 
 ### Prerequisites
@@ -49,7 +114,7 @@ Serial-based tests (U-Boot pre-SSH) assert against the serial.log captured durin
 - Pi flashed with `output/pi.img`, booted to UC run mode
 - SSH accessible via system-user key
 - Serial connected (115200 baud, ttyAMA10)
-- Current kernel snap: `nanotec-pi5-kernel_1.0_rpi-amd64.snap`
+- Current kernel snap: `nanotec-pi5-kernel_1.0_rpi-arm64.snap`
 
 ### Inspect boot.sel
 
@@ -83,14 +148,14 @@ snap changes
 ```bash
 # build host:
 echo "1.1" > nanotec-pi5-kernel/snap-version
-cd nanotec-pi5-kernel && snapcraft --verbose --platform rpi-amd64
+cd nanotec-pi5-kernel && snapcraft --verbose --platform rpi-arm64
 ```
 
 **Step 3 — Install**
 ```bash
-scp nanotec-pi5-kernel_1.1_rpi-amd64.snap user@<pi>:
+scp nanotec-pi5-kernel_1.1_rpi-arm64.snap user@<pi>:
 ssh user@<pi>
-sudo snap install --dangerous nanotec-pi5-kernel_1.1_rpi-amd64.snap
+sudo snap install --dangerous nanotec-pi5-kernel_1.1_rpi-arm64.snap
 # snapd writes kernel_status=try, snap_try_kernel=<rev2>, reboots
 ```
 
@@ -122,7 +187,7 @@ snap list nanotec-pi5-kernel       # rev 2 active
 **Step 1 — Produce bad kernel snap**
 ```bash
 # build host:
-unsquashfs nanotec-pi5-kernel_1.0_rpi-amd64.snap
+unsquashfs nanotec-pi5-kernel_1.0_rpi-arm64.snap
 # Corrupt 1 byte at offset 1024 in the FIT (inside signed region)
 dd if=/dev/urandom of=squashfs-root/kernel.img bs=1 count=1 seek=1024 conv=notrunc
 mksquashfs squashfs-root nanotec-pi5-kernel_bad.snap -comp xz -noappend

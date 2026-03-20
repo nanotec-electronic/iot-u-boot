@@ -1,0 +1,76 @@
+name: U-Boot Secure Boot Tests
+
+on:
+  push:
+    branches: [bcm2712-secureboot]
+  pull_request:
+    branches: [bcm2712-secureboot]
+
+jobs:
+  sandbox-tests:
+    name: Sandbox test suite
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make python3 python3-venv python3-pip \
+            device-tree-compiler swig libssl-dev python3-dev \
+            libgnutls28-dev flex bison mtools \
+            cgpt vboot-utils qemu-utils
+          pip install --break-system-packages -r test/py/requirements.txt
+
+      - name: Build sandbox
+        run: |
+          make sandbox_defconfig
+          scripts/config --disable CONFIG_EFI_CAPSULE_AUTHENTICATE
+          make olddefconfig
+          make -j$(nproc)
+
+      - name: Run sandbox tests
+        run: |
+          ./test/py/test.py --bd sandbox --build-dir . \
+            -k "not efi and not capsule and not test_dm and not test_pinmux \
+                and not abootimg and not test_avb and not test_vbe \
+                and not test_vpl and not test_spl and not test_handoff \
+                and not test_ofplatdata and not zynq and not test_qfw \
+                and not test_tpm2 and not test_scp03 and not test_optee \
+                and not test_fpga and not test_dfu and not test_ums \
+                and not test_upl and not test_fw_handoff and not test_mdio \
+                and not test_mii and not test_scsi and not test_smbios \
+                and not test_trace and not test_pstore and not test_distro \
+                and not test_extension and not test_lsblk and not test_sleep \
+                and not test_net_boot and not test_net and not test_ab \
+                and not test_event_dump and not test_kconfig \
+                and not test_sandbox_opts and not android \
+                and not dm_test_pinctrl_single and not dm_test_usb_keyb \
+                and not font_test_base and not lib_test_membuf_readline \
+                and not bootflow_cmd_menu and not bootflow_scan_menu" \
+            --junitxml=results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandbox-test-results
+          path: results.xml
+
+  cross-compile-check:
+    name: Cross-compile rpi_sb_uc_defconfig
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu make \
+            device-tree-compiler swig libssl-dev python3-dev flex bison
+
+      - name: Build rpi_sb_uc_defconfig
+        run: |
+          make rpi_sb_uc_defconfig
+          make -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu-
+          test -f u-boot.bin
