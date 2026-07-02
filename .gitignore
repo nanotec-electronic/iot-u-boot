@@ -140,3 +140,15 @@ __pycache__
 
 # Clang's compilation database file
 /compile_commands.json
+
+# --- dashboard generated artifacts (CI-only, per 2026-07-02 decision) ---
+docs/*.html
+docs/status.json
+docs/.nojekyll
+docs/reports/
+scripts/dashboard/__pycache__/
+
+# dashboard inputs (tracked despite the .* rule above)
+!.workflow/
+!.workflow/tasks.md
+!.workflow/findings.md
