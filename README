@@ -11,6 +11,10 @@ secure boot chain. Based on upstream v2026.01.
 
 Branch: uc-BCM2712 (Ubuntu Core secure boot — release target)
 
+Live status dashboard (Nanotec patch set only, org-internal):
+  https://nanotec-electronic.github.io/iot-u-boot/
+  Auto-generated from .workflow/state.yaml.
+
 Documentation:
   doc/nanotec/README-uc-secureboot.md  Architecture, defconfig, security analysis
   doc/nanotec/README-testing.md        Test strategy and manual runbook
