@@ -422,7 +422,7 @@ def _fref_link(ref):
         return ""
     if ref.startswith("commit:"):
         h = ref.split(":", 1)[1]
-        return f'<a href="report.html?f={_e(_LATEST_REPORT)}"><code>{_e(h)}</code></a>' if False else f'<code>{_e(h)}</code>'
+        return f'<code>{_e(h)}</code>'
     if ref.startswith("pkg:"):
         return f'<span class="muted">→ package <code>{_e(ref.split(":",1)[1])}</code></span>'
     if ref.startswith("findings.md:"):
