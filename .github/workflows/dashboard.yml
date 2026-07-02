@@ -1,0 +1,69 @@
+name: Repo Status Dashboard
+
+# Builds status.json + the dashboard site and deploys ONLY the generated docs/ to
+# GitHub Pages. Pages Source MUST be "GitHub Actions" (Settings -> Pages -> Source).
+#
+# This is a TEMPLATE. Before committing into a repo, replace the two placeholders:
+#   bcm2712-secureboot  -> the repo's DEFAULT branch (the target). Verified per repo:
+#                          iot-device-admin=dev, iot-gadget-snap=main, iot-rpi-kernel-snap=main,
+#                          iot-master=main, codesyscontrol-snap=candidate (temporarily report on
+#                          the active work branch, but default stays the goal).
+#   python3 scripts/dashboard/build.py --out docs --track u-boot       -> python3 scripts/dashboard/build.py --out docs [--track NAME]
+#                          ONE generator for both classes: it parses the tracked task source
+#                          (Class A: .workflow/state.yaml · Class B: .workflow/tasks.md) and
+#                          renders the dashboard. --track sets the track name (Class B, default
+#                          = repo basename). Add entries via the add-task skill.
+#
+# IMPORTANT: upload path is ALWAYS ./docs, NEVER '.' — '.' would publish the whole source tree.
+# docs/.nojekyll keeps the site served as-is (no Jekyll). Generated artifacts
+# (status.json/index.html/*.html) are .gitignore'd and CI-only — the live Pages URL is the
+# single source of truth; a committed stale artifact is worse than "not reporting".
+
+on:
+  push:
+    branches: ["bcm2712-secureboot"]
+  workflow_dispatch:
+  # keep-alive so the github-pages artifact never expires (aggregator source)
+  schedule:
+    - cron: "0 4 21 * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. Do not cancel an in-progress production deploy.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Build dashboard into docs/
+        run: python3 scripts/dashboard/build.py --out docs --track u-boot
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload docs/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./docs"        # ONLY the dashboard — never '.'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
