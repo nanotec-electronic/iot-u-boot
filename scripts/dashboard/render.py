@@ -98,6 +98,11 @@ def _page(title, body):
 
 
 def _bar(pct, cls=""):
+    # coerce to a bounded int so a non-numeric/foreign `percent` can't inject into the CSS width
+    try:
+        pct = max(0, min(100, int(float(pct))))
+    except (TypeError, ValueError):
+        pct = 0
     return (f'<div class="bar {cls}"><div class="fill" style="width:{pct}%"></div>'
             f'<span class="lbl">{pct}%</span></div>')
 
