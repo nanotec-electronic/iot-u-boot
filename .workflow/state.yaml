@@ -1,0 +1,52 @@
+# state.yaml — the single status source for iot-u-boot (like iot-device-admin).
+# Vendored U-Boot fork (Raspberry Pi custodians upstream). Only Nanotec / Sydney-Krauss commits
+# since the last vendor merge (rpi-2026.04-rc4) are tracked — the upstream U-Boot history is NOT
+# counted. Seeded 2026-07-02 from that Nanotec patch set.
+project: iot-u-boot
+spec_version: "1.0"
+started: "2026-04-01"
+
+packages:
+  # --- open work ---
+  - id: secure-boot-fit-verify
+    status: pending
+    spec_section: secure-boot
+    depends_on: []
+    note: "HIGH · Complete the U-Boot side of the end-to-end secure-boot chain on real CM5 hardware: FIT signature verification against the burned OTP key (not just dev-key), rpi-uc.env + dev-sign.crt coupling. Part of the grade=dangerous -> signed transition across gadget/kernel/master/u-boot."
+  - id: upstream-rebase
+    status: pending
+    spec_section: maintenance
+    depends_on: []
+    note: "MEDIUM · Rebase the Nanotec patch set onto the next upstream U-Boot tag when it lands; re-run the env-import validation regression suite after the rebase."
+
+  # --- Nanotec patch set (done) ---
+  - id: m-kernel-cmdline
+    status: completed
+    spec_section: env
+    depends_on: []
+    commit: 4a0ffae
+    note: "latest — factor common kernel params into a kernel_cmdline variable; add full kernel cmdline to rpi-uc bootargs."
+  - id: m-validation-suite
+    status: completed
+    spec_section: testing
+    depends_on: []
+    commit: 211a691
+    note: "env-import validation regression suite + GitHub Actions CI; validation docs."
+  - id: m-env-import-hardening
+    status: completed
+    spec_section: hardening
+    depends_on: []
+    commit: 4f22d06
+    note: "env import -v: whitespace + shell-metacharacter + newline/VT/FF validation via himport_r() validate parameter."
+  - id: m-sb-defconfig
+    status: completed
+    spec_section: secure-boot
+    depends_on: []
+    commit: 69d9ec2
+    note: "rpi_sb_uc_defconfig + compiled-in UC boot environment for Ubuntu Core secure boot."
+  - id: m-sb-docs
+    status: completed
+    spec_section: docs
+    depends_on: []
+    commit: 0c765e7
+    note: "UC secure-boot documentation under doc/nanotec/ (README-uc-secureboot, README-testing)."

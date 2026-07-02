@@ -9,10 +9,9 @@ name: Repo Status Dashboard
 #                          iot-master=main, codesyscontrol-snap=candidate (temporarily report on
 #                          the active work branch, but default stays the goal).
 #   python3 scripts/dashboard/build.py --out docs --track u-boot       -> python3 scripts/dashboard/build.py --out docs [--track NAME]
-#                          ONE generator for both classes: it parses the tracked task source
-#                          (Class A: .workflow/state.yaml · Class B: .workflow/tasks.md) and
-#                          renders the dashboard. --track sets the track name (Class B, default
-#                          = repo basename). Add entries via the add-task skill.
+#                          ONE generator, ONE source: build.py derives the dashboard from
+#                          .workflow/state.yaml (like iot-device-admin). --track sets the track
+#                          name (default = repo basename).
 #
 # IMPORTANT: upload path is ALWAYS ./docs, NEVER '.' — '.' would publish the whole source tree.
 # docs/.nojekyll keeps the site served as-is (no Jekyll). Generated artifacts
@@ -23,7 +22,10 @@ on:
   push:
     branches: ["bcm2712-secureboot"]
   workflow_dispatch:
-  # keep-alive so the github-pages artifact never expires (aggregator source)
+  # Keep-alive: rebuild+deploy on a schedule so the github-pages artifact never expires
+  # (Actions retention is ~90d). The iot-master aggregator downloads this artifact; a repo
+  # that hasn't been pushed for months would otherwise go stale/expired and show as
+  # "not yet reporting". 0 4 21 * * is staggered per repo to spread runner load.
   schedule:
     - cron: "0 4 21 * *"
 
