@@ -11,9 +11,12 @@ secure boot chain. Based on upstream v2026.01.
 
 Branch: uc-BCM2712 (Ubuntu Core secure boot — release target)
 
-Live status dashboard (Nanotec patch set only, org-internal):
-  https://nanotec-electronic.github.io/iot-u-boot/
-  Auto-generated from .workflow/state.yaml.
+Live status (Nanotec patch set): this fork is a submodule of iot-gadget-snap
+(boot-img-src/iot-u-boot) and is rendered as the "u-boot" track on the gadget's
+status dashboard — it has no separate page (this repo is public; the dashboard
+is org-internal). See:
+  https://nanotec-electronic.github.io/iot-gadget-snap/
+The status source is .workflow/state.yaml in this repo.
 
 Documentation:
   doc/nanotec/README-uc-secureboot.md  Architecture, defconfig, security analysis
