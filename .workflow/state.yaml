@@ -43,6 +43,16 @@ packages:
     spec_section: signing
     depends_on: []
     note: "HIGH · INFRA[Nanotec → Jörg Wiemann] · U-Boot image signing into the self-service signing infra; ability to build a signed mass-storage bootloader. Private key never leaves the server. Ties into iot-master self-service-signing-infra."
+  - id: secureboot-acceptance-tests
+    status: pending
+    spec_section: secure-boot
+    depends_on: [uboot-complete-rpi-bootloader-closed]
+    note: "HIGH · Run the secure-boot acceptance/production checklist on real CM5 hardware (doc/nanotec/README-uc-secureboot.md §Production Checklist): verify uart_2ndstage=0 in EEPROM; A/B kernel rollback (try/trying/clear cycle); boot retry (corrupt FIT → auto-reset after 60s); tampered boot.scr on partition is ignored; tampered boot.sel with injected vars rejected by env-import -v validation."
+  - id: uboot-test-automation
+    status: pending
+    spec_section: testing
+    depends_on: []
+    note: "MEDIUM · Implement the planned testflinger + spread automated test harness from doc/nanotec/README-testing.md 'Framework Strategy (future automation)' (suites B01–B05, K01–K05, SEC01–SEC04, UC01–UC04). Currently plan-only; distinct from the completed sandbox env-import regression suite (m-validation-suite)."
 
   # --- Nanotec patch set (done) ---
   - id: m-kernel-cmdline
