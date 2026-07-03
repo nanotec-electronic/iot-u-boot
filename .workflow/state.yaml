@@ -18,6 +18,31 @@ packages:
     spec_section: maintenance
     depends_on: []
     note: "MEDIUM · Rebase the Nanotec patch set onto the next upstream U-Boot tag when it lands; re-run the env-import validation regression suite after the rebase."
+  - id: reference-uboot-integration
+    status: pending
+    spec_section: secure-boot
+    depends_on: []
+    note: "HIGH · Integrate the new reference U-Boot (Canonical iot-field-gadget-snap, branch bcm2712-secureboot) against our U-Boot implementation. Distinct from upstream-rebase — this is aligning our fork with the reference secure-boot gadget, not a plain tag rebase."
+  - id: uboot-secureboot-hardening
+    status: pending
+    spec_section: secure-boot
+    depends_on: []
+    note: "HIGH · Secure U-Boot hardening based on the Embetrix meta-raspberrypi-secure layer (security-harden.cfg): production defconfig rpi_sb_uc_prod_defconfig (CONFIG_DISABLE_CONSOLE=y, drop AUTOBOOT_STOP_STR/CMD_USB/VIDEO), PROFILE=production|debug|dev-unlocked through build-boot-img.sh, production checklist (uart_2ndstage=0, program_pubkey). Ref: gadget docs/SECURE-BOOT-RESEARCH-NOTES.md §Proposed #2."
+  - id: uboot-complete-rpi-bootloader-closed
+    status: pending
+    spec_section: secure-boot
+    depends_on: [uboot-secureboot-hardening]
+    note: "HIGH · Drive U-Boot fully through: RPi bootloader closed — OTP pubkey burned (program_pubkey), dev-key path implicitly revoked via BCM2712 counter-signing, downgrade to non-secure-boot bootloaders rejected by ROM."
+  - id: serial-binding-dev-signed
+    status: pending
+    spec_section: secure-boot
+    depends_on: []
+    note: "MEDIUM · Add serial-number binding in U-Boot for dev-signed images (board_late_init serial allowlist; /chosen/serial-number or the new rpi-machine-id DT node)."
+  - id: uboot-signing-infra
+    status: pending
+    spec_section: signing
+    depends_on: []
+    note: "HIGH · INFRA[Nanotec → Jörg Wiemann] · U-Boot image signing into the self-service signing infra; ability to build a signed mass-storage bootloader. Private key never leaves the server. Ties into iot-master self-service-signing-infra."
 
   # --- Nanotec patch set (done) ---
   - id: m-kernel-cmdline
