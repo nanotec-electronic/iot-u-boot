@@ -12,46 +12,109 @@ packages:
     status: pending
     spec_section: secure-boot
     depends_on: []
-    note: "HIGH · Complete the U-Boot side of the end-to-end secure-boot chain on real CM5 hardware: FIT signature verification against the burned OTP key (not just dev-key), rpi-uc.env + dev-sign.crt coupling. Part of the grade=dangerous -> signed transition across gadget/kernel/master/u-boot."
+    estimate:
+      size: L
+      hours: [5, 10]
+      confidence: low
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: hw-gated
+    note: "HIGH · Complete the U-Boot side of the end-to-end secure-boot chain on real CM5 hardware: FIT signature verification against the burned OTP key (not just dev-key), rpi-uc.env + dev-sign.crt coupling. Part of the grade=dangerous -> signed transition across gadget/kernel/master/u-boot. Twin of iot-rpi-kernel-snap secure-boot-fit-verify — one E2E job tracked in both repos; keep status in sync, execute once."
   - id: upstream-rebase
     status: pending
     spec_section: maintenance
     depends_on: []
+    estimate:
+      size: M
+      hours: [3, 6]
+      confidence: medium
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: own
     note: "MEDIUM · Rebase the Nanotec patch set onto the next upstream U-Boot tag when it lands; re-run the env-import validation regression suite after the rebase."
   - id: reference-uboot-integration
     status: pending
     spec_section: secure-boot
     depends_on: []
+    estimate:
+      size: L
+      hours: [6, 14]
+      confidence: low
+      source: 2026-07-28-estimate
+    tranche: followup-2027
+    category: own
     note: "HIGH · Integrate the new reference U-Boot (Canonical iot-field-gadget-snap, branch bcm2712-secureboot) against our U-Boot implementation. Distinct from upstream-rebase — this is aligning our fork with the reference secure-boot gadget, not a plain tag rebase."
   - id: uboot-secureboot-hardening
     status: pending
     spec_section: secure-boot
     depends_on: []
+    estimate:
+      size: M
+      hours: [4, 8]
+      confidence: medium
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: own
     note: "HIGH · Secure U-Boot hardening based on the Embetrix meta-raspberrypi-secure layer (security-harden.cfg): production defconfig rpi_sb_uc_prod_defconfig (CONFIG_DISABLE_CONSOLE=y, drop AUTOBOOT_STOP_STR/CMD_USB/VIDEO), PROFILE=production|debug|dev-unlocked through build-boot-img.sh, production checklist (uart_2ndstage=0, program_pubkey). Ref: gadget docs/SECURE-BOOT-RESEARCH-NOTES.md §Proposed #2."
   - id: uboot-complete-rpi-bootloader-closed
     status: pending
     spec_section: secure-boot
     depends_on: [uboot-secureboot-hardening]
+    estimate:
+      size: L
+      hours: [5, 10]
+      confidence: low
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: hw-gated
     note: "HIGH · Drive U-Boot fully through: RPi bootloader closed — OTP pubkey burned (program_pubkey), dev-key path implicitly revoked via BCM2712 counter-signing, downgrade to non-secure-boot bootloaders rejected by ROM."
   - id: serial-binding-dev-signed
     status: pending
     spec_section: secure-boot
     depends_on: []
+    estimate:
+      size: M
+      hours: [2.5, 5]
+      confidence: medium
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: own
     note: "MEDIUM · Add serial-number binding in U-Boot for dev-signed images (board_late_init serial allowlist; /chosen/serial-number or the new rpi-machine-id DT node)."
   - id: uboot-signing-infra
     status: pending
     spec_section: signing
     depends_on: []
+    estimate:
+      size: M
+      hours: [2, 4]
+      confidence: medium
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: ext-coord
     note: "HIGH · INFRA[Nanotec → Jörg Wiemann] · U-Boot image signing into the self-service signing infra; ability to build a signed mass-storage bootloader. Private key never leaves the server. Ties into iot-master self-service-signing-infra."
   - id: secureboot-acceptance-tests
     status: pending
     spec_section: secure-boot
     depends_on: [uboot-complete-rpi-bootloader-closed]
+    estimate:
+      size: M
+      hours: [3, 6]
+      confidence: medium
+      source: 2026-07-28-estimate
+    tranche: mvp-2026
+    category: hw-gated
     note: "HIGH · Run the secure-boot acceptance/production checklist on real CM5 hardware (doc/nanotec/README-uc-secureboot.md §Production Checklist): verify uart_2ndstage=0 in EEPROM; A/B kernel rollback (try/trying/clear cycle); boot retry (corrupt FIT → auto-reset after 60s); tampered boot.scr on partition is ignored; tampered boot.sel with injected vars rejected by env-import -v validation."
   - id: uboot-test-automation
     status: pending
     spec_section: testing
     depends_on: []
+    estimate:
+      size: XL
+      hours: [16, 35]
+      confidence: low
+      source: 2026-07-28-estimate
+    tranche: followup-2027
+    category: own
     note: "MEDIUM · Implement the planned testflinger + spread automated test harness from doc/nanotec/README-testing.md 'Framework Strategy (future automation)' (suites B01–B05, K01–K05, SEC01–SEC04, UC01–UC04). Currently plan-only; distinct from the completed sandbox env-import regression suite (m-validation-suite)."
 
   # --- Nanotec patch set (done) ---
@@ -60,18 +123,33 @@ packages:
     spec_section: env
     depends_on: []
     commit: 4a0ffae
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: low
+      source: 2026-07-29-retrofit-milestone
     note: "latest — factor common kernel params into a kernel_cmdline variable; add full kernel cmdline to rpi-uc bootargs."
   - id: m-validation-suite
     status: completed
     spec_section: testing
     depends_on: []
     commit: 211a691
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: low
+      source: 2026-07-29-retrofit-milestone
     note: "env-import validation regression suite + GitHub Actions CI; validation docs."
   - id: m-env-import-hardening
     status: completed
     spec_section: hardening
     depends_on: []
     commit: 4f22d06
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: low
+      source: 2026-07-29-retrofit-milestone
     note: "env import -v: whitespace + shell-metacharacter + newline/VT/FF validation via himport_r() validate parameter."
   - id: m-sb-defconfig
     status: completed
@@ -84,4 +162,9 @@ packages:
     spec_section: docs
     depends_on: []
     commit: 0c765e7
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: low
+      source: 2026-07-29-retrofit-milestone
     note: "UC secure-boot documentation under doc/nanotec/ (README-uc-secureboot, README-testing)."
