@@ -124,7 +124,9 @@ GitHub Actions runs automatically on push/PR (`.github/workflows/test.yml`):
 
 - Pi flashed with `output/pi.img`, booted to UC run mode
 - SSH accessible via system-user key
-- Serial connected (115200 baud, ttyAMA10)
+- Serial connected (115200 baud). Kernel log is on the carrier header GPIO14/15
+  (`ttyAMA0`); U-Boot's own output is only on the CM5 module pads 35/36
+  (`ttyAMA10`) — see README-uc-secureboot.md, Console Configuration
 - Current kernel snap: `nanotec-pi5-kernel_1.0_rpi-arm64.snap`
 
 ### Inspect boot.sel

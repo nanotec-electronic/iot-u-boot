@@ -97,7 +97,7 @@ CONFIG_BOOTCOMMAND="run boot_uc"
 **Install/recovery mode**:
 - Set kernel prefix: `systems/${snapd_recovery_system}/kernel/`
 
-4. Set `bootargs` with snapd params and `panic=-1` (no `console=` — kernel uses `stdout-path` from firmware DTB)
+4. Set `bootargs` with snapd params, `panic=-1` and `console=ttyAMA0,115200` (see [Console Configuration](#console-configuration))
 5. Call `run loadfiles` (loads FIT image)
 
 ### loadfiles
@@ -430,11 +430,40 @@ uninitialized and the vidconsole driver produces corrupted output on serial —
 every `printf` blocks waiting on the failed framebuffer write. Serial-only
 avoids this entirely.
 
-No `console=` in kernel bootargs: the kernel uses `stdout-path` from the
-firmware-provided DTB (points to `ttyAMA10`). Both the serial console and the
-framebuffer console (fbcon) are active for kernel messages. If serial-only
-kernel output is needed, add `console=ttyAMA10,115200` to the `setenv
-bootargs` calls in `load_uc`.
+### Kernel console
+
+`kernel_cmdline` in `rpi-uc.env` carries `console=ttyAMA0,115200` — the RP1
+PL011 on GPIO14/15, which is the carrier's serial header and the only UART both
+Nanotec sample boards bring out.
+
+It must be spelled `ttyAMA0`, not `serial0`. `console_setup()`
+(`kernel/printk/printk.c`) splits `serial0` into name `"serial"` + index 0 and
+matches it against driver-registered console names; PL011 registers `"ttyAMA"`,
+so `"serial"` never matches. It also fails *closed*: any `console=` sets
+`console_set_on_cmdline`, and `of_console_check()` (`drivers/of/base.c`) then
+skips the `/chosen/stdout-path` fallback — so a bad `console=` leaves the kernel
+with no console at all (`/proc/consoles` empty, `unable to open an initial
+console` in dmesg). Raspberry Pi OS accepts `console=serial0` only because the
+*firmware* substitutes the alias while processing `cmdline.txt`; here the
+cmdline is compiled into `u-boot.bin` and the firmware never sees it.
+
+The earlier claim in this document — that dropping `console=` gives a serial
+console via `stdout-path` — was wrong in practice. `stdout-path` is static in
+`bcm2712-rpi.dtsi` and reads `serial10:115200n8`, i.e. the CM5's dedicated debug
+UART on module pads 35/36. `enable_rp1_uart=1` retargets the firmware's `console`
+*alias*, but no kernel code consumes that alias. Relying on `stdout-path` would
+require an overlay fragment that rewrites `/chosen/stdout-path`, and that is
+mutually exclusive with setting `console=`.
+
+RP1 sits behind enumerated PCIe, so `ttyAMA0` probes late (~1.16 s). The standard
+deferred-console path replays the full log once it registers; no earlycon is
+possible for RP1, and none is needed.
+
+**U-Boot's own output is not on GPIO14/15 and cannot be.** U-Boot resolves its
+console from `/chosen/stdout-path` → `serial10` → the SoC PL011 on the module
+pads, and it has no RP1 driver and never brings up PCIe. Reaching U-Boot output
+means probing the module pads directly. This is structural, not a
+misconfiguration.
 
 ## Memory Map
 
