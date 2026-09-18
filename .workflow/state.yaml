@@ -8,6 +8,69 @@ started: "2026-04-01"
 
 packages:
   # --- open work ---
+  - id: coherent-pool-for-ab-firmware-update
+    status: pending
+    depends_on: []
+    estimate:
+      size: S
+      hours: [1.5, 3]
+      confidence: medium
+      source: 2026-09-18-estimate
+    tranche: mvp-2026
+    category: own
+    # PROBLEM (measured on DUT .72, 2026-09-18). The A/B bootloader update fails
+    # in the KERNEL, before the firmware ever sees the message. dmesg at the
+    # moment of the failed write:
+    #   DMA pool exhausted for 107c013880.mailbox
+    #   WARNING: kernel/dma/pool.c:291 at dma_alloc_from_pool, CPU#1: rpi-eeprom-ab
+    #   ... dma_alloc_attrs -> vcio_user_property_list -> vcio_device_ioctl
+    # The tool reports only `ioctl_mbox_property failed: -1` and its catch-all
+    # "Unknown error. Please check you are running a firmware version that
+    # supports AB." — misleading: A/B support is fine, the ioctl never got
+    # through. A firmware-level refusal would arrive as its own A/B error code
+    # (rpieepromab.c:282-284), so this is unambiguously host-side.
+    # NOT CMA: CmaTotal 65536 kB / CmaFree 64936 kB, essentially untouched. It is
+    # the kernel's ATOMIC dma pool.
+    # WHY IT FAILS. rpi_firmware_property_list does dma_alloc_coherent of the tag
+    # payload (drivers/firmware/raspberrypi.c:94-106) and rpi-eeprom-ab ships
+    # RPI_EEPROM_AB_UPDATE_PACKET_MAX_SIZE = 256 KiB per packet
+    # (utils/rpieepromab/rpieepromab.h:8). The pool is 4 MiB here — 128 KiB per
+    # GiB RAM, capped by MAX_ORDER (kernel/dma/pool.c:197-205; verified against
+    # config-resolute-nonrt-7.0.0-1010: 4 K pages, CONFIG_ARCH_FORCE_MAX_ORDER=10
+    # -> 1024 * 4096 = 4 MiB, and the cap binds at >= 1 GiB, so 8 GB does not
+    # help). So it holds ~16 packets and is not "too small for one allocation" —
+    # it fails on FRAGMENTATION: gen_pool_first_fit_order_align (:172) needs a
+    # 256 KiB-ALIGNED contiguous run, so free bytes do not predict success, and
+    # the pool only self-expands asynchronously via a workqueue
+    # (atomic_pool_work_fn, :151-160), which cannot serve a synchronous burst of
+    # back-to-back 256 KiB requests — exactly the A/B write's shape.
+    # IMPACT. Field firmware updates are unreliable, non-deterministically: the
+    # 17:50 migration on .72 got its first packets through and failed on a later
+    # one (succeeded, then errored); later attempts failed on the first packet,
+    # on a freshly booted idle device, with both an older and an identical image.
+    # A device that sometimes takes a security update is worse than one that
+    # clearly cannot. The failure itself is benign — the write goes to the
+    # INACTIVE partition, so an interrupted update leaves the running bootloader
+    # untouched.
+    # FIX. Add `coherent_pool=16M` to the kernel command line — 4x the default,
+    # ~64 packets, negligible against 8 GB. The cmdline is compiled into
+    # u-boot.bin via board/raspberrypi/rpi/rpi-uc.env (load_uc, bootargs) and is
+    # NOT editable at runtime on Ubuntu Core, so this needs a U-Boot rebuild and
+    # a signed boot.img.
+    # 16M IS MARGIN, NOT MEASUREMENT. Peak concurrent atomic-pool demand was not
+    # measured. What would settle it: /sys/kernel/debug/dma_pools/ plus
+    # gen_pool_avail across a boot and a migration, or empirically the smallest
+    # of 8M/16M/32M that stops failing across repeated boots.
+    # VERIFY AFTER THE REBUILD: repeated `rpi-eeprom-ab update` runs on a
+    # migrated device, across several boots, with no `DMA pool exhausted` in
+    # dmesg. Nothing yet demonstrates that raising the pool actually fixes it —
+    # that measurement is the close-out for this package.
+    # Already handled in software (iot-device-admin, provisioning): the A/B
+    # target classifies this via vendortool.ErrIoctl and reports it as a HOST
+    # fault ("module intact, power-cycle safe, do NOT send it back to the rig"),
+    # naming coherent_pool as the known cause, so healthy modules are not
+    # scrapped in the factory. That is a mitigation of the symptom, not the fix.
+
   - id: secure-boot-fit-verify
     status: pending
     spec_section: secure-boot
