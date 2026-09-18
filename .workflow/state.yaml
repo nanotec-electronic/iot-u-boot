@@ -9,13 +9,43 @@ started: "2026-04-01"
 packages:
   # --- open work ---
   - id: coherent-pool-for-ab-firmware-update
-    status: pending
+    status: completed
     depends_on: []
+    commit: 1ba55eb
     estimate:
       size: S
       hours: [1.5, 3]
       confidence: medium
       source: 2026-09-18-estimate
+    actual:
+      hours: 2.5
+      source: session-2026-09-18
+    note: >-
+      Done and VERIFIED on hardware the same day. Measured before: "DMA:
+      preallocated 512 KiB GFP_KERNEL|GFP_DMA pool", debugfs pool_size_dma
+      524288 with kernel and dma32 both 0 - ONE pool of 512 KiB against a
+      256 KiB allocation per A/B packet, each needing a 256 KiB-ALIGNED
+      contiguous run. Measured after (same device, gadget edition 35,
+      2026-09-18 19:12): cmdline carries coherent_pool=16M, pool_size_dma
+      20971520, two consecutive `rpi-eeprom-ab update` runs completed 18/18
+      packets with `update-status: Success`, and ZERO "DMA pool exhausted"
+      lines in the whole boot - against two per boot before. A full field
+      firmware update then ran end to end (gap detected, inactive partition
+      written, tryboot armed, reboot, committed) in 47 s.
+      Two corrections to the estimate's own reasoning, both from measurement:
+      the default pool here is 512 KiB, not the 4 MiB derived from
+      kernel/dma/pool.c, and ONE pool is created, not three - so the cost is
+      16 MiB of 8 GB, not 48 MiB.
+      NOT closed by this: the root cause is in the vendor tool, whose
+      7-attempt retry loop (rpieepromab.c:648-666) retries only on BUSY while
+      a failed DMA allocation arrives as FAILED and aborts the whole update,
+      although the condition is transient and self-healing. 16M lowers the
+      probability; it does not bound it. Chunking was evaluated and does not
+      work - the allocation is sizeof(msg), a compile-time constant, so a
+      shorter payload allocates exactly as much. Written up in
+      master-controller/BUGREPORT-rpi-eeprom-ab-retry.md, not yet sent.
+      Note Raspberry Pi's own DT sets coherent_pool=1M, so there is no vendor
+      precedent for raising it - on stock RPi OS this fails MORE readily.
     tranche: mvp-2026
     category: own
     # PROBLEM (measured on DUT .72, 2026-09-18). The A/B bootloader update fails
