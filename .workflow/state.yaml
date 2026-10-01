@@ -8,99 +8,6 @@ started: "2026-04-01"
 
 packages:
   # --- open work ---
-  - id: coherent-pool-for-ab-firmware-update
-    status: completed
-    depends_on: []
-    commit: 1ba55eb
-    estimate:
-      size: S
-      hours: [1.5, 3]
-      confidence: medium
-      source: 2026-09-18-estimate
-    actual:
-      hours: 2.5
-      source: session-2026-09-18
-    note: >-
-      Done and VERIFIED on hardware the same day. Measured before: "DMA:
-      preallocated 512 KiB GFP_KERNEL|GFP_DMA pool", debugfs pool_size_dma
-      524288 with kernel and dma32 both 0 - ONE pool of 512 KiB against a
-      256 KiB allocation per A/B packet, each needing a 256 KiB-ALIGNED
-      contiguous run. Measured after (same device, gadget edition 35,
-      2026-09-18 19:12): cmdline carries coherent_pool=16M, pool_size_dma
-      20971520, two consecutive `rpi-eeprom-ab update` runs completed 18/18
-      packets with `update-status: Success`, and ZERO "DMA pool exhausted"
-      lines in the whole boot - against two per boot before. A full field
-      firmware update then ran end to end (gap detected, inactive partition
-      written, tryboot armed, reboot, committed) in 47 s.
-      Two corrections to the estimate's own reasoning, both from measurement:
-      the default pool here is 512 KiB, not the 4 MiB derived from
-      kernel/dma/pool.c, and ONE pool is created, not three - so the cost is
-      16 MiB of 8 GB, not 48 MiB.
-      NOT closed by this: the root cause is in the vendor tool, whose
-      7-attempt retry loop (rpieepromab.c:648-666) retries only on BUSY while
-      a failed DMA allocation arrives as FAILED and aborts the whole update,
-      although the condition is transient and self-healing. 16M lowers the
-      probability; it does not bound it. Chunking was evaluated and does not
-      work - the allocation is sizeof(msg), a compile-time constant, so a
-      shorter payload allocates exactly as much. Written up in
-      a separate upstream bug report, not yet sent.
-      Note Raspberry Pi's own DT sets coherent_pool=1M, so there is no vendor
-      precedent for raising it - on stock RPi OS this fails MORE readily.
-    tranche: mvp-2026
-    category: own
-    # PROBLEM (measured 2026-09-18). The A/B bootloader update fails
-    # in the KERNEL, before the firmware ever sees the message. dmesg at the
-    # moment of the failed write:
-    #   DMA pool exhausted for 107c013880.mailbox
-    #   WARNING: kernel/dma/pool.c:291 at dma_alloc_from_pool, CPU#1: rpi-eeprom-ab
-    #   ... dma_alloc_attrs -> vcio_user_property_list -> vcio_device_ioctl
-    # The tool reports only `ioctl_mbox_property failed: -1` and its catch-all
-    # "Unknown error. Please check you are running a firmware version that
-    # supports AB." — misleading: A/B support is fine, the ioctl never got
-    # through. A firmware-level refusal would arrive as its own A/B error code
-    # (rpieepromab.c:282-284), so this is unambiguously host-side.
-    # NOT CMA: CmaTotal 65536 kB / CmaFree 64936 kB, essentially untouched. It is
-    # the kernel's ATOMIC dma pool.
-    # WHY IT FAILS. rpi_firmware_property_list does dma_alloc_coherent of the tag
-    # payload (drivers/firmware/raspberrypi.c:94-106) and rpi-eeprom-ab ships
-    # RPI_EEPROM_AB_UPDATE_PACKET_MAX_SIZE = 256 KiB per packet
-    # (utils/rpieepromab/rpieepromab.h:8). The pool is 4 MiB here — 128 KiB per
-    # GiB RAM, capped by MAX_ORDER (kernel/dma/pool.c:197-205; verified against
-    # config-resolute-nonrt-7.0.0-1010: 4 K pages, CONFIG_ARCH_FORCE_MAX_ORDER=10
-    # -> 1024 * 4096 = 4 MiB, and the cap binds at >= 1 GiB, so 8 GB does not
-    # help). So it holds ~16 packets and is not "too small for one allocation" —
-    # it fails on FRAGMENTATION: gen_pool_first_fit_order_align (:172) needs a
-    # 256 KiB-ALIGNED contiguous run, so free bytes do not predict success, and
-    # the pool only self-expands asynchronously via a workqueue
-    # (atomic_pool_work_fn, :151-160), which cannot serve a synchronous burst of
-    # back-to-back 256 KiB requests — exactly the A/B write's shape.
-    # IMPACT. Field firmware updates are unreliable, non-deterministically: the
-    # first migration attempt got its first packets through and failed on a later
-    # one (succeeded, then errored); later attempts failed on the first packet,
-    # on a freshly booted idle device, with both an older and an identical image.
-    # A device that sometimes takes a security update is worse than one that
-    # clearly cannot. The failure itself is benign — the write goes to the
-    # INACTIVE partition, so an interrupted update leaves the running bootloader
-    # untouched.
-    # FIX. Add `coherent_pool=16M` to the kernel command line — 4x the default,
-    # ~64 packets, negligible against 8 GB. The cmdline is compiled into
-    # u-boot.bin via board/raspberrypi/rpi/rpi-uc.env (load_uc, bootargs) and is
-    # NOT editable at runtime on Ubuntu Core, so this needs a U-Boot rebuild and
-    # a signed boot.img.
-    # 16M IS MARGIN, NOT MEASUREMENT. Peak concurrent atomic-pool demand was not
-    # measured. What would settle it: /sys/kernel/debug/dma_pools/ plus
-    # gen_pool_avail across a boot and a migration, or empirically the smallest
-    # of 8M/16M/32M that stops failing across repeated boots.
-    # VERIFY AFTER THE REBUILD: repeated `rpi-eeprom-ab update` runs on a
-    # migrated device, across several boots, with no `DMA pool exhausted` in
-    # dmesg. Nothing yet demonstrates that raising the pool actually fixes it —
-    # that measurement is the close-out for this package.
-    # Already handled in software (iot-device-admin, provisioning): the A/B
-    # target classifies this via vendortool.ErrIoctl and reports it as a HOST
-    # fault ("module intact, power-cycle safe, do NOT send it back to the rig"),
-    # naming coherent_pool as the known cause, so healthy modules are not
-    # scrapped in the factory. That is a mitigation of the symptom, not the fix.
-
   - id: secure-boot-fit-verify
     status: pending
     spec_section: secure-boot
@@ -210,7 +117,156 @@ packages:
     category: own
     note: "MEDIUM · Implement the planned testflinger + spread automated test harness from doc/nanotec/README-testing.md 'Framework Strategy (future automation)' (suites B01–B05, K01–K05, SEC01–SEC04, UC01–UC04). Currently plan-only; distinct from the completed sandbox env-import regression suite (m-validation-suite)."
 
+  - id: report-rpi-eeprom-ab-retry-upstream
+    status: pending
+    spec_section: maintenance
+    depends_on: []
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: medium
+      source: 2026-10-01-housekeeping
+    tranche: mvp-2026
+    category: ext-coord
+    note: "POST-VACATION · Send the written-up upstream bug report on the rpi-eeprom-ab retry loop to Raspberry Pi (raspberrypi/utils): the 7-attempt loop retries only on BUSY, while a transient DMA-pool allocation failure arrives as FAILED and aborts the whole A/B update. Root cause behind coherent-pool-for-ab-firmware-update (coherent_pool=16M lowers the probability, does not bound it). The draft lives in the private master repo (security hardening docs); it stays there. Record the upstream issue link here once sent."
+
   # --- Nanotec patch set (done) ---
+  - id: coherent-pool-for-ab-firmware-update
+    status: completed
+    depends_on: []
+    commit: 0106aa41e55
+    estimate:
+      size: S
+      hours: [1.5, 3]
+      confidence: medium
+      source: 2026-09-18-estimate
+    actual:
+      hours: 2.5
+      source: session-2026-09-18
+    note: >-
+      Done and VERIFIED on hardware the same day. Measured before: "DMA:
+      preallocated 512 KiB GFP_KERNEL|GFP_DMA pool", debugfs pool_size_dma
+      524288 with kernel and dma32 both 0 - ONE pool of 512 KiB against a
+      256 KiB allocation per A/B packet, each needing a 256 KiB-ALIGNED
+      contiguous run. Measured after (same device, gadget edition 35,
+      2026-09-18 19:12): cmdline carries coherent_pool=16M, pool_size_dma
+      20971520, two consecutive `rpi-eeprom-ab update` runs completed 18/18
+      packets with `update-status: Success`, and ZERO "DMA pool exhausted"
+      lines in the whole boot - against two per boot before. A full field
+      firmware update then ran end to end (gap detected, inactive partition
+      written, tryboot armed, reboot, committed) in 47 s.
+      Two corrections to the estimate's own reasoning, both from measurement:
+      the default pool here is 512 KiB, not the 4 MiB derived from
+      kernel/dma/pool.c, and ONE pool is created, not three - so the cost is
+      16 MiB of 8 GB, not 48 MiB.
+      NOT closed by this: the root cause is in the vendor tool, whose
+      7-attempt retry loop (rpieepromab.c:648-666) retries only on BUSY while
+      a failed DMA allocation arrives as FAILED and aborts the whole update,
+      although the condition is transient and self-healing. 16M lowers the
+      probability; it does not bound it. Chunking was evaluated and does not
+      work - the allocation is sizeof(msg), a compile-time constant, so a
+      shorter payload allocates exactly as much. Written up in
+      a separate upstream bug report, not yet sent.
+      Note Raspberry Pi's own DT sets coherent_pool=1M, so there is no vendor
+      precedent for raising it - on stock RPi OS this fails MORE readily.
+    tranche: mvp-2026
+    category: own
+    # PROBLEM (measured 2026-09-18). The A/B bootloader update fails
+    # in the KERNEL, before the firmware ever sees the message. dmesg at the
+    # moment of the failed write:
+    #   DMA pool exhausted for 107c013880.mailbox
+    #   WARNING: kernel/dma/pool.c:291 at dma_alloc_from_pool, CPU#1: rpi-eeprom-ab
+    #   ... dma_alloc_attrs -> vcio_user_property_list -> vcio_device_ioctl
+    # The tool reports only `ioctl_mbox_property failed: -1` and its catch-all
+    # "Unknown error. Please check you are running a firmware version that
+    # supports AB." — misleading: A/B support is fine, the ioctl never got
+    # through. A firmware-level refusal would arrive as its own A/B error code
+    # (rpieepromab.c:282-284), so this is unambiguously host-side.
+    # NOT CMA: CmaTotal 65536 kB / CmaFree 64936 kB, essentially untouched. It is
+    # the kernel's ATOMIC dma pool.
+    # WHY IT FAILS. rpi_firmware_property_list does dma_alloc_coherent of the tag
+    # payload (drivers/firmware/raspberrypi.c:94-106) and rpi-eeprom-ab ships
+    # RPI_EEPROM_AB_UPDATE_PACKET_MAX_SIZE = 256 KiB per packet
+    # (utils/rpieepromab/rpieepromab.h:8). The pool is 4 MiB here — 128 KiB per
+    # GiB RAM, capped by MAX_ORDER (kernel/dma/pool.c:197-205; verified against
+    # config-resolute-nonrt-7.0.0-1010: 4 K pages, CONFIG_ARCH_FORCE_MAX_ORDER=10
+    # -> 1024 * 4096 = 4 MiB, and the cap binds at >= 1 GiB, so 8 GB does not
+    # help). So it holds ~16 packets and is not "too small for one allocation" —
+    # it fails on FRAGMENTATION: gen_pool_first_fit_order_align (:172) needs a
+    # 256 KiB-ALIGNED contiguous run, so free bytes do not predict success, and
+    # the pool only self-expands asynchronously via a workqueue
+    # (atomic_pool_work_fn, :151-160), which cannot serve a synchronous burst of
+    # back-to-back 256 KiB requests — exactly the A/B write's shape.
+    # IMPACT. Field firmware updates are unreliable, non-deterministically: the
+    # first migration attempt got its first packets through and failed on a later
+    # one (succeeded, then errored); later attempts failed on the first packet,
+    # on a freshly booted idle device, with both an older and an identical image.
+    # A device that sometimes takes a security update is worse than one that
+    # clearly cannot. The failure itself is benign — the write goes to the
+    # INACTIVE partition, so an interrupted update leaves the running bootloader
+    # untouched.
+    # FIX. Add `coherent_pool=16M` to the kernel command line — 4x the default,
+    # ~64 packets, negligible against 8 GB. The cmdline is compiled into
+    # u-boot.bin via board/raspberrypi/rpi/rpi-uc.env (load_uc, bootargs) and is
+    # NOT editable at runtime on Ubuntu Core, so this needs a U-Boot rebuild and
+    # a signed boot.img.
+    # 16M IS MARGIN, NOT MEASUREMENT. Peak concurrent atomic-pool demand was not
+    # measured. What would settle it: /sys/kernel/debug/dma_pools/ plus
+    # gen_pool_avail across a boot and a migration, or empirically the smallest
+    # of 8M/16M/32M that stops failing across repeated boots.
+    # VERIFY AFTER THE REBUILD: repeated `rpi-eeprom-ab update` runs on a
+    # migrated device, across several boots, with no `DMA pool exhausted` in
+    # dmesg. Nothing yet demonstrates that raising the pool actually fixes it —
+    # that measurement is the close-out for this package.
+    # Already handled in software (iot-device-admin, provisioning): the A/B
+    # target classifies this via vendortool.ErrIoctl and reports it as a HOST
+    # fault ("module intact, power-cycle safe, do NOT send it back to the rig"),
+    # naming coherent_pool as the known cause, so healthy modules are not
+    # scrapped in the factory. That is a mitigation of the symptom, not the fix.
+  - id: docs-refresh
+    status: completed
+    spec_section: docs
+    depends_on: []
+    commit: a5cab6fb6ea
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: high
+      source: 2026-10-01-housekeeping
+    note: "README base (rpi-2026.04-rc4) and branch (bcm2712-secureboot); current gadget/kernel snap names and the current kernel version-bump procedure in the secure-boot and testing docs; new kernel command line section + production console drop; stale TODO dropped from the rpi-uc.env comment (compiled env unchanged)."
+  - id: rt-kernel-cmdline
+    status: completed
+    spec_section: env
+    depends_on: []
+    commit: 1db5f2f5ed2
+    estimate:
+      size: M
+      hours: [2.5, 5]
+      confidence: reconstructed
+      source: 2026-10-01-housekeeping
+    note: "Real-time kernel cmdline series 2026-09-04..2026-09-29 (7830e227e05 .. 1db5f2f5ed2): core 3 reserved for the cyclic fieldbus task (skew_tick, nohz_full=3, isolcpus=managed_irq,domain,3, rcu_nocbs, rcu_nocb_poll, irqaffinity=0-1), performance governor, nosoftlockup, audit=0, systemd.zram=0, GOMAXPROCS=1 for system Go services and five static scheduler/VM sysctls. Parameters were added, A/B-measured and partly reverted in between; the final set is documented in rpi-uc.env and doc/nanotec/README-uc-secureboot.md."
+  - id: production-console-drop
+    status: completed
+    spec_section: env
+    depends_on: []
+    commit: 47cf9dba57a
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: reconstructed
+      source: 2026-10-01-housekeeping
+    note: "2026-08-24..25: kernel console on the carrier UART as console=ttyAMA0 (c9f10b28b02, 7c2e3e0064a); NANOTEC_PRODUCTION (gadget build with PRODUCTION=1) drops console= entirely (47cf9dba57a)."
+  - id: m-ci-sha-pin
+    status: completed
+    spec_section: testing
+    depends_on: []
+    commit: beee3586fb8
+    estimate:
+      size: S
+      hours: [0.5, 1]
+      confidence: reconstructed
+      source: 2026-10-01-housekeeping
+    note: "2026-08-25 — SHA-pin the actions in test.yml."
   - id: m-kernel-cmdline
     status: completed
     spec_section: env
@@ -248,7 +304,12 @@ packages:
     status: completed
     spec_section: secure-boot
     depends_on: []
-    commit: 69d9ec2
+    commit: 69d9ecba206
+    estimate:
+      size: S
+      hours: [1, 2.5]
+      confidence: low
+      source: 2026-10-01-housekeeping
     note: "rpi_sb_uc_defconfig + compiled-in UC boot environment for Ubuntu Core secure boot."
   - id: m-sb-docs
     status: completed
