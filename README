@@ -7,9 +7,10 @@ Nanotec IoT — Raspberry Pi 5 / CM5 Secure Boot
 ================================================
 
 This is nanotec-electronic's U-Boot fork for the Pi 5 / CM5 Ubuntu Core
-secure boot chain. Based on upstream v2026.01.
+secure boot chain. Based on the Raspberry Pi custodian tree at tag
+rpi-2026.04-rc4 (U-Boot v2026.04-rc4).
 
-Branch: uc-BCM2712 (Ubuntu Core secure boot — release target)
+Branch: bcm2712-secureboot (Ubuntu Core secure boot — release target)
 
 Live status (Nanotec patch set): this fork is a submodule of iot-gadget-snap
 (boot-img-src/iot-u-boot) and is rendered as the "u-boot" track on the gadget's
@@ -24,7 +25,8 @@ Documentation:
 
 Key files:
   configs/rpi_sb_uc_defconfig           Hardened defconfig
-  board/raspberrypi/rpi/rpi-uc.env      Compiled-in boot environment
+  board/raspberrypi/rpi/rpi-uc.env      Compiled-in boot environment, incl. the
+                                        kernel command line (kernel_cmdline)
 
 Quick build:
   make mrproper

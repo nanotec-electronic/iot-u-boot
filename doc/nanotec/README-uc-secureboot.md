@@ -97,7 +97,7 @@ CONFIG_BOOTCOMMAND="run boot_uc"
 **Install/recovery mode**:
 - Set kernel prefix: `systems/${snapd_recovery_system}/kernel/`
 
-4. Set `bootargs` with snapd params, `panic=-1` and `console=ttyAMA0,115200` (see [Console Configuration](#console-configuration))
+4. Set `bootargs` with snapd params and `kernel_cmdline` (see [Kernel Command Line](#kernel-command-line) and [Console Configuration](#console-configuration))
 5. Call `run loadfiles` (loads FIT image)
 
 ### loadfiles
@@ -405,13 +405,13 @@ entire chain.
 
 ### Gadget snap consequences
 
-For Ubuntu Core specifically, the gadget snap (`nanotec-pi5-gadget/`) reflects
+For Ubuntu Core specifically, the gadget snap (iot-gadget-snap, snap `nanotec-master-pi-gadget`) reflects
 these changes:
 
 - `gadget.yaml` — `boot.scr` content entry removed from ubuntu-seed (nothing to ship)
 - `snap/snapcraft.yaml` — `boot-scr` build part removed (nothing to compile)
 - `snap/snapcraft.yaml` — `mkenvimage` uses no `-r` flag (see NXP divergence above)
-- `boot-script/boot.scr.in` — kept in repo for reference, no longer used in builds
+- `boot-script/boot.scr.in` — removed (no longer used in builds)
 
 ## Console Configuration
 
@@ -458,6 +458,25 @@ mutually exclusive with setting `console=`.
 RP1 sits behind enumerated PCIe, so `ttyAMA0` probes late (~1.16 s). The standard
 deferred-console path replays the full log once it registers; no earlycon is
 possible for RP1, and none is needed.
+
+**Production builds drop `console=`.** When the gadget builds U-Boot with
+`PRODUCTION=1`, `NANOTEC_PRODUCTION` is defined and `rpi-uc.env` selects a
+`kernel_cmdline` without `console=`. The kernel then falls back to
+`/chosen/stdout-path` (`serial10`, the module pads), so nothing is emitted on the
+carrier's serial header. That is the intended production behaviour.
+
+### Kernel Command Line
+
+The kernel command line is compiled in as `kernel_cmdline` in
+`board/raspberrypi/rpi/rpi-uc.env` (secure boot does not read `cmdline.txt`); the
+comment block above it documents every parameter. Besides `panic=-1` and the
+console it carries `coherent_pool=16M` (atomic DMA pool for A/B bootloader
+updates via the VideoCore mailbox) and the real-time set (core 3 reserved for the
+cyclic fieldbus task: `nohz_full`, `isolcpus`, `rcu_nocbs`, `irqaffinity`,
+fixed CPU governor, `systemd.zram=0`, `GOMAXPROCS=1` for system Go services and a
+few static scheduler/VM sysctls). Both variants (production / non-production)
+carry the same set and differ only in `console=`. A change to it needs a U-Boot
+rebuild and a new signed `boot.img`.
 
 **U-Boot's own output is not on GPIO14/15 and cannot be.** U-Boot resolves its
 console from `/chosen/stdout-path` → `serial10` → the SoC PL011 on the module

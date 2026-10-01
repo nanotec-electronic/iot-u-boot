@@ -127,7 +127,7 @@ GitHub Actions runs automatically on push/PR (`.github/workflows/test.yml`):
 - Serial connected (115200 baud). Kernel log is on the carrier header GPIO14/15
   (`ttyAMA0`); U-Boot's own output is only on the CM5 module pads 35/36
   (`ttyAMA10`) — see README-uc-secureboot.md, Console Configuration
-- Current kernel snap: `nanotec-pi5-kernel_1.0_rpi-arm64.snap`
+- Current kernel snap: `nanotec-pi-kernel-signed_<v1>_arm64.snap` (built by iot-rpi-kernel-snap)
 
 ### Inspect boot.sel
 
@@ -152,23 +152,23 @@ sudo umount /mnt
 **Step 1 — Baseline**
 ```bash
 ssh user@<pi>
-snap list nanotec-pi5-kernel   # note current revision
+snap list nanotec-pi-kernel-signed   # note current revision
 snap changes
 # inspect ubuntu-boot boot.sel: snap_kernel=..., kernel_status= (empty)
 ```
 
 **Step 2 — Build v2 snap (same kernel, bumped version)**
 ```bash
-# build host:
-echo "1.1" > nanotec-pi5-kernel/snap-version
-cd nanotec-pi5-kernel && snapcraft --verbose --platform rpi-arm64
+# build host, in iot-rpi-kernel-snap: same kernel, distinct version suffix
+echo "t1" > build-variants/from-apt/.snap-version-suffix
+./build.sh                         # -> nanotec-pi-kernel-signed_<v1>-t1_arm64.snap
 ```
 
 **Step 3 — Install**
 ```bash
-scp nanotec-pi5-kernel_1.1_rpi-arm64.snap user@<pi>:
+scp nanotec-pi-kernel-signed_<v1>-t1_arm64.snap user@<pi>:
 ssh user@<pi>
-sudo snap install --dangerous nanotec-pi5-kernel_1.1_rpi-arm64.snap
+sudo snap install --dangerous nanotec-pi-kernel-signed_<v1>-t1_arm64.snap
 # snapd writes kernel_status=try, snap_try_kernel=<rev2>, reboots
 ```
 
@@ -185,7 +185,7 @@ Booting verified kernel...
 **Step 5 — Verify adoption**
 ```bash
 snap changes                       # should show "Done"
-snap list nanotec-pi5-kernel       # rev 2 active
+snap list nanotec-pi-kernel-signed # rev 2 active
 # boot.sel: snap_kernel=<rev2>, kernel_status= (empty), snap_try_kernel= (cleared)
 ```
 
@@ -200,17 +200,17 @@ snap list nanotec-pi5-kernel       # rev 2 active
 **Step 1 — Produce bad kernel snap**
 ```bash
 # build host:
-unsquashfs nanotec-pi5-kernel_1.0_rpi-arm64.snap
+unsquashfs nanotec-pi-kernel-signed_<v1>_arm64.snap
 # Corrupt 1 byte at offset 1024 in the FIT (inside signed region)
 dd if=/dev/urandom of=squashfs-root/kernel.img bs=1 count=1 seek=1024 conv=notrunc
-mksquashfs squashfs-root nanotec-pi5-kernel_bad.snap -comp xz -noappend
+mksquashfs squashfs-root nanotec-pi-kernel-signed_bad.snap -comp xz -noappend
 ```
 
 **Step 2 — Install**
 ```bash
-scp nanotec-pi5-kernel_bad.snap user@<pi>:
+scp nanotec-pi-kernel-signed_bad.snap user@<pi>:
 ssh user@<pi>
-sudo snap install --dangerous nanotec-pi5-kernel_bad.snap
+sudo snap install --dangerous nanotec-pi-kernel-signed_bad.snap
 # snapd extracts corrupted kernel.img to ubuntu-boot, sets kernel_status=try, reboots
 ```
 
@@ -234,7 +234,7 @@ Booting verified kernel...
 **Step 5 — Verify**
 ```bash
 snap changes                       # shows refresh "Error" with rollback note
-snap list nanotec-pi5-kernel       # back to rev 1
+snap list nanotec-pi-kernel-signed # back to rev 1
 # boot.sel: snap_kernel=<rev1>, kernel_status= (empty)
 ```
 
