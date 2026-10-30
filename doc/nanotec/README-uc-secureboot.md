@@ -474,7 +474,13 @@ console it carries `coherent_pool=16M` (atomic DMA pool for A/B bootloader
 updates via the VideoCore mailbox) and the real-time set (core 3 reserved for the
 cyclic fieldbus task: `nohz_full`, `isolcpus`, `rcu_nocbs`, `irqaffinity`,
 fixed CPU governor, `systemd.zram=0`, `GOMAXPROCS=1` for system Go services and a
-few static scheduler/VM sysctls). Both variants (production / non-production)
+few static scheduler/VM sysctls), and `module.sig_enforce=1`: unsigned kernel
+modules are refused, which is what makes the firmware's device-key lock
+(`lock_device_private_key=1`) meaningful on a platform whose OTP is readable from
+kernel mode. Canonical signs every in-tree module of the repacked kernel and the
+product loads no out-of-tree module, so nothing the product needs is affected;
+own modules would need an own kernel build with an own signing key
+(iot-master SECURITY-REGISTER D-17). Both variants (production / non-production)
 carry the same set and differ only in `console=`. A change to it needs a U-Boot
 rebuild and a new signed `boot.img`.
 
