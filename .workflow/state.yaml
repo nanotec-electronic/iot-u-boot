@@ -118,7 +118,7 @@ packages:
     note: "MEDIUM · Implement the planned testflinger + spread automated test harness from doc/nanotec/README-testing.md 'Framework Strategy (future automation)' (suites B01–B05, K01–K05, SEC01–SEC04, UC01–UC04). Currently plan-only; distinct from the completed sandbox env-import regression suite (m-validation-suite)."
 
   - id: report-rpi-eeprom-ab-retry-upstream
-    status: pending
+    status: wont_do
     spec_section: maintenance
     depends_on: []
     estimate:
@@ -128,7 +128,8 @@ packages:
       source: 2026-10-01-housekeeping
     tranche: mvp-2026
     category: ext-coord
-    note: "POST-VACATION · Send the written-up upstream bug report on the rpi-eeprom-ab retry loop to Raspberry Pi (raspberrypi/utils): the 7-attempt loop retries only on BUSY, while a transient DMA-pool allocation failure arrives as FAILED and aborts the whole A/B update. Root cause behind coherent-pool-for-ab-firmware-update (coherent_pool=16M lowers the probability, does not bound it). The draft lives in the private master repo (security hardening docs); it stays there. Record the upstream issue link here once sent."
+    note: "Upstream: raspberrypi/utils (rpi-eeprom-ab) · not reported · documented only — report docs/bug-reports/2026-09-18-rpi-utils-rpi-eeprom-ab-retry.md. The 7-attempt packet loop retries only on BUSY, while a transient DMA-pool allocation failure arrives as FAILED and aborts the whole A/B update. Root cause behind coherent-pool-for-ab-firmware-update (coherent_pool=16M lowers the probability, does not bound it). If it is reported later, record the issue link here and in the report front matter."
+    wont_do_reason: "documented, not reported for now (decision 2026-11-04); mitigated by coherent-pool-for-ab-firmware-update"
 
   # --- Nanotec patch set (done) ---
   - id: coherent-pool-for-ab-firmware-update
